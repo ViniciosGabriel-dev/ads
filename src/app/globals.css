@@ -14,8 +14,22 @@
 html { scroll-behavior: smooth; }
 
 body {
-  font-family: "Google Sans", Roboto, Arial, sans-serif;
+  font-family: var(--font-roboto), "Google Sans", Roboto, Arial, sans-serif;
+  font-weight: 400;
   color: #202124;
   background: #fff;
   margin: 0;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 400;
+  margin: 0;
+}
+
+button {
+  font-family: inherit;
+}
+
+strong {
+  font-weight: 700;
 }

@@ -7,28 +7,28 @@ import Link from "next/link";
 
 const faqs = [
   {
-    question: "What types of Google Ads campaigns can I run?",
-    answer: "Google Ads offers several campaign types to match your marketing goals: Search campaigns (text ads on Google Search), Display campaigns (visual ads across the web), Shopping campaigns (product listings on Google), Video campaigns (ads on YouTube), App campaigns (promote your mobile app), and Performance Max campaigns (AI-powered campaigns across all Google channels). Each type serves different business objectives and reaches customers at different stages of their journey.",
+    question: "Quais tipos de campanhas do Google Ads posso veicular?",
+    answer: "O Google Ads oferece vários tipos de campanha para atender aos seus objetivos de marketing: Campanhas de Pesquisa (anúncios de texto na Pesquisa Google), Campanhas de Display (anúncios visuais em toda a web), Campanhas de Shopping (listagens de produtos no Google), Campanhas de Vídeo (anúncios no YouTube), Campanhas de App (promova seu aplicativo mobile) e Campanhas Performance Max (campanhas com IA em todos os canais do Google). Cada tipo atende a objetivos de negócios diferentes e alcança clientes em diferentes estágios da jornada.",
   },
   {
-    question: "Is Google Ads right for my business?",
-    answer: "Google Ads works for businesses of all sizes — from local service providers to global e-commerce stores. If your customers search for products or services like yours online, Google Ads can help you reach them. You control your budget (starting from any amount), only pay when someone clicks your ad, and can pause or stop campaigns at any time. Over 1 million businesses worldwide use Google Ads to grow.",
+    question: "O Google Ads é adequado para o meu negócio?",
+    answer: "O Google Ads funciona para empresas de todos os tamanhos — de prestadores de serviços locais a lojas globais de e-commerce. Se seus clientes buscam produtos ou serviços como os seus online, o Google Ads pode ajudá-lo a alcançá-los. Você controla seu orçamento (a partir de qualquer valor), paga apenas quando alguém clica no seu anúncio e pode pausar ou interromper campanhas a qualquer momento. Mais de 1 milhão de empresas no mundo usam o Google Ads para crescer.",
   },
   {
-    question: "How does Google AI help improve my ads?",
-    answer: "Google AI powers many features across Google Ads to help you get better results automatically. Smart Bidding uses machine learning to optimize your bids in real time for each auction. Performance Max automatically finds your best-performing ad combinations across all Google channels. Responsive Search Ads test different headlines and descriptions to find what resonates best with your audience. Google AI learns from your campaign data to continuously improve performance over time.",
+    question: "Como a IA do Google ajuda a melhorar meus anúncios?",
+    answer: "A IA do Google alimenta muitos recursos no Google Ads para ajudá-lo a obter melhores resultados automaticamente. O Smart Bidding usa machine learning para otimizar seus lances em tempo real em cada leilão. O Performance Max encontra automaticamente as melhores combinações de anúncios em todos os canais do Google. Os Anúncios de Pesquisa Responsivos testam diferentes títulos e descrições para descobrir o que ressoa melhor com seu público. A IA do Google aprende com os dados da sua campanha para melhorar continuamente o desempenho ao longo do tempo.",
   },
   {
-    question: "How do I target the right audience with Google Ads?",
-    answer: "Google Ads provides powerful targeting options to reach your ideal customers: Keywords (show ads when people search specific terms), Location targeting (local, regional, or global), Demographics (age, gender, household income), Interests & intent (people interested in or actively researching your category), Remarketing (re-engage past website visitors), Customer Match (target existing customers by email list), and Similar audiences (reach new people who resemble your best customers).",
+    question: "Como segmento o público certo com o Google Ads?",
+    answer: "O Google Ads oferece poderosas opções de segmentação para alcançar seus clientes ideais: Palavras-chave (exiba anúncios quando pessoas buscam termos específicos), Segmentação geográfica (local, regional ou global), Dados demográficos (idade, gênero, renda familiar), Interesses e intenção (pessoas interessadas ou pesquisando ativamente sua categoria), Remarketing (reengaje visitantes anteriores do site), Customer Match (segmente clientes existentes por lista de e-mail) e Públicos semelhantes (alcance novas pessoas que se assemelham aos seus melhores clientes).",
   },
   {
-    question: "How much does Google Ads cost?",
-    answer: "Google Ads works on a pay-per-click (PPC) model — you only pay when someone clicks your ad. There is no minimum budget requirement. You set a daily budget cap to control spending, and you can adjust or pause your campaigns at any time. The cost per click varies by industry, competition, and keyword. On average, businesses make $2 in revenue for every $1 spent on Google Ads. New advertisers can also get ad credits of up to $500 when they start.",
+    question: "Quanto custa o Google Ads?",
+    answer: "O Google Ads funciona no modelo de custo por clique (CPC) — você paga apenas quando alguém clica no seu anúncio. Não há orçamento mínimo obrigatório. Você define um limite de orçamento diário para controlar os gastos e pode ajustar ou pausar suas campanhas a qualquer momento. O custo por clique varia por setor, concorrência e palavra-chave. Em média, as empresas faturam R$ 2 para cada R$ 1 investido no Google Ads. Novos anunciantes também podem receber créditos de anúncio de até R$ 1.200 ao começar.",
   },
   {
-    question: "How long does it take to see results?",
-    answer: "Many advertisers see results within hours of launching their first campaign — once approved, ads can start showing immediately. However, Google recommends allowing at least 30-90 days for Smart Bidding strategies to gather data and optimize. For most businesses, you'll start seeing meaningful data and initial results within the first 2 weeks. Ongoing optimization typically leads to continuous improvement over time.",
+    question: "Quanto tempo leva para ver resultados?",
+    answer: "Muitos anunciantes veem resultados em poucas horas após lançar sua primeira campanha — uma vez aprovados, os anúncios podem começar a ser exibidos imediatamente. No entanto, o Google recomenda aguardar pelo menos 30 a 90 dias para que as estratégias de Smart Bidding coletem dados e otimizem. Para a maioria das empresas, você começará a ver dados relevantes e resultados iniciais nas primeiras 2 semanas. A otimização contínua geralmente leva a melhorias constantes ao longo do tempo.",
   },
 ];
 
@@ -44,13 +44,13 @@ export default function FAQ() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
         >
-          <h2 className="text-4xl font-normal mb-4" style={{ color: "#202124" }}>
-            Frequently asked questions
+          <h2 className="text-4xl mb-4" style={{ color: "#202124", fontWeight: 400 }}>
+            Perguntas frequentes
           </h2>
-          <p className="text-lg" style={{ color: "#5f6368" }}>
-            Have more questions?{" "}
+          <p className="text-lg" style={{ color: "#5f6368", fontWeight: 400 }}>
+            Tem mais dúvidas?{" "}
             <Link href="/support" className="underline" style={{ color: "#1a73e8" }}>
-              Visit our Help Center
+              Visite nossa Central de Ajuda
             </Link>
           </p>
         </motion.div>
@@ -71,7 +71,7 @@ export default function FAQ() {
                 style={{ background: open === i ? "#f8f9fa" : "#fff" }}
                 onClick={() => setOpen(open === i ? null : i)}
               >
-                <span className="font-medium pr-4" style={{ color: "#202124", fontSize: 16 }}>
+                <span className="pr-4" style={{ color: "#202124", fontSize: 16, fontWeight: 500 }}>
                   {faq.question}
                 </span>
                 <div className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center" style={{ background: open === i ? "#1a73e8" : "#f1f3f4" }}>
@@ -91,7 +91,7 @@ export default function FAQ() {
                     transition={{ duration: 0.25 }}
                     style={{ overflow: "hidden" }}
                   >
-                    <div className="px-6 pb-5 pt-1 text-sm leading-relaxed" style={{ color: "#5f6368", borderTop: "1px solid #dadce0" }}>
+                    <div className="px-6 pb-5 pt-1 text-sm leading-relaxed" style={{ color: "#5f6368", borderTop: "1px solid #dadce0", fontWeight: 400 }}>
                       {faq.answer}
                     </div>
                   </motion.div>

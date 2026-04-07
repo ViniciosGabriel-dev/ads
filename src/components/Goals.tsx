@@ -9,40 +9,40 @@ const goals = [
     icon: TrendingUp,
     color: "#1a73e8",
     bg: "#e8f0fe",
-    title: "Increase leads and conversions",
-    description: "Connect with high-intent customers and turn them into buyers with targeted Search and Display campaigns.",
+    title: "Aumente leads e conversões",
+    description: "Conecte-se com clientes de alta intenção e transforme-os em compradores com campanhas de Pesquisa e Display segmentadas.",
     href: "/goals/leads",
   },
   {
     icon: ShoppingCart,
     color: "#34a853",
     bg: "#e6f4ea",
-    title: "Boost online sales",
-    description: "Drive more purchases on your website with Shopping ads that showcase your products at the moment people are ready to buy.",
+    title: "Impulsione as vendas online",
+    description: "Gere mais compras no seu site com Anúncios de Shopping que exibem seus produtos no momento em que as pessoas estão prontas para comprar.",
     href: "/goals/sales",
   },
   {
     icon: MapPin,
     color: "#ea4335",
     bg: "#fce8e6",
-    title: "Increase foot traffic",
-    description: "Drive customers to your physical store locations with local campaigns that show ads to people nearby.",
+    title: "Aumente o tráfego para sua loja",
+    description: "Leve clientes até suas lojas físicas com campanhas locais que exibem anúncios para pessoas próximas.",
     href: "/goals/store-visits",
   },
   {
     icon: Users,
     color: "#fbbc05",
     bg: "#fef9e0",
-    title: "Build brand awareness",
-    description: "Expand your reach and make a lasting impression with Video and Display campaigns that put your brand in front of the right people.",
+    title: "Construa reconhecimento de marca",
+    description: "Expanda seu alcance e cause uma impressão duradoura com campanhas de Vídeo e Display que colocam sua marca diante das pessoas certas.",
     href: "/goals/awareness",
   },
   {
     icon: Download,
     color: "#9c27b0",
     bg: "#f3e5f5",
-    title: "Get more app installs",
-    description: "Grow your app's user base with App campaigns that promote your app across Search, Play, YouTube, and more.",
+    title: "Obtenha mais instalações do app",
+    description: "Expanda a base de usuários do seu app com campanhas de App que o promovem na Pesquisa, Play, YouTube e muito mais.",
     href: "/goals/app-installs",
   },
 ];
@@ -57,11 +57,11 @@ export default function Goals() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
         >
-          <h2 className="text-4xl font-normal mb-4" style={{ color: "#202124" }}>
-            Achieve your business goals
+          <h2 className="text-4xl mb-4" style={{ color: "#202124", fontWeight: 400 }}>
+            Alcance seus objetivos de negócio
           </h2>
-          <p className="text-lg max-w-2xl mx-auto" style={{ color: "#5f6368" }}>
-            Whether you want more website visits, phone calls, or in-store visits — Google Ads can help you get there.
+          <p className="text-lg max-w-2xl mx-auto" style={{ color: "#5f6368", fontWeight: 400 }}>
+            Seja mais visitas ao site, chamadas telefônicas ou visitas à loja — o Google Ads pode ajudá-lo a chegar lá.
           </p>
         </motion.div>
 
@@ -82,10 +82,10 @@ export default function Goals() {
                 <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-5" style={{ background: g.bg }}>
                   <Icon size={26} color={g.color} />
                 </div>
-                <h3 className="text-lg font-medium mb-3" style={{ color: "#202124" }}>{g.title}</h3>
-                <p className="text-sm leading-relaxed flex-1 mb-5" style={{ color: "#5f6368" }}>{g.description}</p>
-                <Link href={g.href} className="flex items-center gap-1 text-sm font-medium" style={{ color: g.color }}>
-                  Learn more <ArrowRight size={14} />
+                <h3 className="text-lg mb-3" style={{ color: "#202124", fontWeight: 500 }}>{g.title}</h3>
+                <p className="text-sm leading-relaxed flex-1 mb-5" style={{ color: "#5f6368", fontWeight: 400 }}>{g.description}</p>
+                <Link href={g.href} className="flex items-center gap-1 text-sm" style={{ color: g.color, fontWeight: 500 }}>
+                  Saiba mais <ArrowRight size={14} />
                 </Link>
               </motion.div>
             );
@@ -101,25 +101,25 @@ export default function Goals() {
             style={{ background: "#202124", color: "#fff" }}
           >
             <div>
-              <h3 className="text-lg font-medium mb-3 text-white">Not sure where to start?</h3>
-              <p className="text-sm leading-relaxed mb-6" style={{ color: "rgba(255,255,255,0.75)" }}>
-                Our Google Ads experts can help you choose the right campaign type for your business goals — for free.
+              <h3 className="text-lg mb-3 text-white" style={{ fontWeight: 500 }}>Não sabe por onde começar?</h3>
+              <p className="text-sm leading-relaxed mb-6" style={{ color: "rgba(255,255,255,0.75)", fontWeight: 400 }}>
+                Nossos especialistas do Google Ads podem ajudá-lo a escolher o tipo de campanha certo para seus objetivos de negócio — sem custo adicional.
               </p>
             </div>
             <div className="flex flex-col gap-3">
               <Link
                 href="/start"
-                className="text-center py-2.5 rounded text-sm font-medium"
-                style={{ background: "#1a73e8", color: "#fff" }}
+                className="text-center py-2.5 text-sm"
+                style={{ background: "#1a73e8", color: "#fff", borderRadius: 24, fontWeight: 500 }}
               >
-                Start now
+                Começar agora
               </Link>
               <Link
                 href="/expert"
-                className="text-center py-2.5 rounded text-sm font-medium"
-                style={{ border: "1px solid rgba(255,255,255,0.4)", color: "#fff" }}
+                className="text-center py-2.5 text-sm"
+                style={{ border: "1px solid rgba(255,255,255,0.4)", color: "#fff", borderRadius: 24, fontWeight: 400 }}
               >
-                Talk to an expert
+                Falar com um especialista
               </Link>
             </div>
           </motion.div>

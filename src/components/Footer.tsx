@@ -4,27 +4,27 @@ import Link from "next/link";
 import { Globe } from "lucide-react";
 
 const footerLinks = {
-  "Products": [
+  "Produtos": [
     { label: "Google Ads", href: "/" },
-    { label: "YouTube Ads", href: "/youtube-ads" },
+    { label: "Anúncios no YouTube", href: "/youtube-ads" },
     { label: "Google Merchant Center", href: "/merchant-center" },
     { label: "Google Analytics", href: "/analytics" },
     { label: "Performance Max", href: "/performance-max" },
   ],
-  "Learning & support": [
-    { label: "Help Center", href: "/help" },
-    { label: "Google Ads blog", href: "/blog" },
-    { label: "Accelerate with Google", href: "/accelerate" },
+  "Aprendizado e suporte": [
+    { label: "Central de Ajuda", href: "/help" },
+    { label: "Blog do Google Ads", href: "/blog" },
+    { label: "Acelere com o Google", href: "/accelerate" },
     { label: "Google Skillshop", href: "/skillshop" },
     { label: "Google Ads Editor", href: "/editor" },
   ],
-  "Partners & developers": [
+  "Parceiros e desenvolvedores": [
     { label: "Google Partners", href: "/partners" },
-    { label: "Google Ads API", href: "/api" },
+    { label: "API do Google Ads", href: "/api" },
     { label: "Google Marketing Platform", href: "/platform" },
-    { label: "Authorized Buyers", href: "/buyers" },
+    { label: "Compradores Autorizados", href: "/buyers" },
   ],
-  "Additional solutions": [
+  "Soluções adicionais": [
     { label: "Google Workspace", href: "/workspace" },
     { label: "Google Chrome Enterprise", href: "/chrome" },
     { label: "Google Cloud", href: "/cloud" },
@@ -94,14 +94,14 @@ export default function Footer() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-12">
           {Object.entries(footerLinks).map(([category, links]) => (
             <div key={category}>
-              <h4 className="text-sm font-medium mb-4" style={{ color: "#202124" }}>{category}</h4>
+              <h4 className="text-sm mb-4" style={{ color: "#202124", fontWeight: 500 }}>{category}</h4>
               <ul className="space-y-2">
                 {links.map((link) => (
                   <li key={link.href}>
                     <Link
                       href={link.href}
                       className="text-sm transition-colors"
-                      style={{ color: "#5f6368" }}
+                      style={{ color: "#5f6368", fontWeight: 400 }}
                       onMouseEnter={(e) => { (e.target as HTMLElement).style.color = "#1a73e8"; }}
                       onMouseLeave={(e) => { (e.target as HTMLElement).style.color = "#5f6368"; }}
                     >
@@ -135,17 +135,17 @@ export default function Footer() {
             ))}
           </div>
 
-          <p className="text-xs" style={{ color: "#9aa0a6" }}>
-            © {new Date().getFullYear()} Google LLC. All rights reserved.
+          <p className="text-xs" style={{ color: "#9aa0a6", fontWeight: 400 }}>
+            © {new Date().getFullYear()} Google LLC. Todos os direitos reservados.
           </p>
 
           <div className="flex items-center gap-4">
-            <button className="flex items-center gap-1 text-xs" style={{ color: "#5f6368" }}>
+            <button className="flex items-center gap-1 text-xs" style={{ color: "#5f6368", fontWeight: 400 }}>
               <Globe size={14} />
-              English (United States)
+              Português (Brasil)
             </button>
-            <Link href="/privacy" className="text-xs" style={{ color: "#5f6368" }}>Privacy</Link>
-            <Link href="/terms" className="text-xs" style={{ color: "#5f6368" }}>Terms</Link>
+            <Link href="/privacy" className="text-xs" style={{ color: "#5f6368", fontWeight: 400 }}>Privacidade</Link>
+            <Link href="/terms" className="text-xs" style={{ color: "#5f6368", fontWeight: 400 }}>Termos</Link>
           </div>
         </div>
       </div>

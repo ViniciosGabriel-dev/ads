@@ -16,11 +16,11 @@ export default function Support() {
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
           >
-            <h2 className="text-4xl font-normal mb-4 text-white">
-              Let us help you get started
+            <h2 className="text-4xl mb-4 text-white" style={{ fontWeight: 400 }}>
+              Deixe-nos ajudá-lo a começar
             </h2>
-            <p className="text-lg max-w-lg" style={{ color: "rgba(255,255,255,0.75)" }}>
-              Our Google Ads specialists are available to help you set up your first campaign, optimize performance, and achieve your business goals — at no extra cost.
+            <p className="text-lg max-w-lg" style={{ color: "rgba(255,255,255,0.75)", fontWeight: 400 }}>
+              Nossos especialistas do Google Ads estão disponíveis para ajudá-lo a configurar sua primeira campanha, otimizar o desempenho e alcançar seus objetivos de negócio — sem custo adicional.
             </p>
           </motion.div>
 
@@ -34,26 +34,26 @@ export default function Support() {
             {[
               {
                 icon: Phone,
-                title: "Call us",
-                desc: "Speak directly with a Google Ads expert",
-                href: "tel:1-866-246-6453",
-                cta: "1-866-246-6453",
+                title: "Ligue para nós",
+                desc: "Fale diretamente com um especialista do Google Ads",
+                href: "tel:08007248349",
+                cta: "0800 724 8349",
                 color: "#34a853",
               },
               {
                 icon: Calendar,
-                title: "Schedule a meeting",
-                desc: "Book a free 1-on-1 session with an expert",
+                title: "Agendar reunião",
+                desc: "Reserve uma sessão gratuita 1 a 1 com um especialista",
                 href: "/schedule",
-                cta: "Book now",
+                cta: "Agendar agora",
                 color: "#1a73e8",
               },
               {
                 icon: MessageCircle,
-                title: "Chat with us",
-                desc: "Get instant help from our support team",
+                title: "Chat com a gente",
+                desc: "Obtenha ajuda imediata da nossa equipe de suporte",
                 href: "/chat",
-                cta: "Start chat",
+                cta: "Iniciar chat",
                 color: "#fbbc05",
               },
             ].map((item, i) => {
@@ -62,7 +62,7 @@ export default function Support() {
                 <Link
                   key={i}
                   href={item.href}
-                  className="flex flex-col p-6 rounded-xl transition-all group"
+                  className="flex flex-col p-6 rounded-xl transition-all"
                   style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.15)", minWidth: 180 }}
                   onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.14)"; }}
                   onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.08)"; }}
@@ -70,9 +70,9 @@ export default function Support() {
                   <div className="w-10 h-10 rounded-full flex items-center justify-center mb-4" style={{ background: `${item.color}22` }}>
                     <Icon size={20} color={item.color} />
                   </div>
-                  <p className="font-medium text-white mb-1 text-sm">{item.title}</p>
-                  <p className="text-xs mb-4" style={{ color: "rgba(255,255,255,0.6)" }}>{item.desc}</p>
-                  <span className="text-sm font-medium" style={{ color: item.color }}>{item.cta} →</span>
+                  <p className="text-white mb-1 text-sm" style={{ fontWeight: 500 }}>{item.title}</p>
+                  <p className="text-xs mb-4" style={{ color: "rgba(255,255,255,0.6)", fontWeight: 400 }}>{item.desc}</p>
+                  <span className="text-sm" style={{ color: item.color, fontWeight: 500 }}>{item.cta} →</span>
                 </Link>
               );
             })}

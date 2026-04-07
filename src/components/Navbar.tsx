@@ -3,15 +3,15 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown, Menu, X } from "lucide-react";
+import { Menu, X } from "lucide-react";
 
 const navLinks = [
-  { label: "Overview", href: "/" },
-  { label: "Goals", href: "/goals" },
-  { label: "How it works", href: "/how-it-works" },
-  { label: "Cost", href: "/cost" },
-  { label: "Articles & case studies", href: "/articles" },
-  { label: "Expert support", href: "/support" },
+  { label: "Visão geral", href: "/" },
+  { label: "Objetivos", href: "/goals" },
+  { label: "Como funciona", href: "/how-it-works" },
+  { label: "Custo", href: "/cost" },
+  { label: "Artigos e estudos de caso", href: "/articles" },
+  { label: "Suporte especializado", href: "/support" },
 ];
 
 export default function Navbar() {
@@ -47,41 +47,40 @@ export default function Navbar() {
           <span style={{ fontSize: 13, color: "#5f6368", fontWeight: 400, marginTop: 2 }}>Ads</span>
         </Link>
 
-        {/* Desktop nav */}
-        <nav className="hidden md:flex items-center gap-1">
-          {navLinks.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className="px-3 py-2 text-sm font-medium rounded transition-colors"
-              style={{ color: "#202124" }}
-              onMouseEnter={(e) => { (e.target as HTMLElement).style.background = "#f1f3f4"; }}
-              onMouseLeave={(e) => { (e.target as HTMLElement).style.background = "transparent"; }}
-            >
-              {link.label}
-            </Link>
-          ))}
-        </nav>
-
         {/* CTA Buttons */}
         <div className="hidden md:flex items-center gap-3">
+          {/* Phone */}
+          <a
+            href="tel:08007248349"
+            className="flex items-center gap-2 text-sm"
+            style={{ color: "#1a73e8", fontWeight: 400, whiteSpace: "nowrap" }}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="#1a73e8">
+              <path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/>
+            </svg>
+            0800 724 8349
+          </a>
+
+          {/* Acesse sua conta */}
           <Link
             href="/signin"
-            className="text-sm font-medium px-4 py-2 rounded transition-colors"
-            style={{ color: "#1a73e8" }}
-            onMouseEnter={(e) => { (e.target as HTMLElement).style.background = "#e8f0fe"; }}
-            onMouseLeave={(e) => { (e.target as HTMLElement).style.background = "transparent"; }}
+            className="text-sm px-5 py-2 transition-colors"
+            style={{ color: "#1a73e8", border: "1px solid #dadce0", borderRadius: 24, fontWeight: 400, background: "#fff" }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "#f8f9fa"; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "#fff"; }}
           >
-            Sign in
+            Acesse sua conta
           </Link>
+
+          {/* Começar agora */}
           <Link
-            href="/start"
-            className="text-sm font-medium px-5 py-2 rounded text-white"
-            style={{ background: "#1a73e8" }}
-            onMouseEnter={(e) => { (e.target as HTMLElement).style.background = "#1557b0"; }}
-            onMouseLeave={(e) => { (e.target as HTMLElement).style.background = "#1a73e8"; }}
+            href="/signin"
+            className="text-sm px-6 py-2 text-white"
+            style={{ background: "#1a73e8", borderRadius: 24, fontWeight: 500 }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "#1557b0"; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "#1a73e8"; }}
           >
-            Start now
+            Começar agora
           </Link>
         </div>
 
@@ -89,7 +88,7 @@ export default function Navbar() {
         <button
           className="md:hidden p-2 rounded"
           onClick={() => setMobileOpen(!mobileOpen)}
-          aria-label="Toggle menu"
+          aria-label="Abrir menu"
         >
           {mobileOpen ? <X size={22} /> : <Menu size={22} />}
         </button>
@@ -105,21 +104,13 @@ export default function Navbar() {
             transition={{ duration: 0.2 }}
             style={{ background: "#fff", borderTop: "1px solid #dadce0" }}
           >
-            <nav className="flex flex-col px-4 py-3 gap-1">
-              {navLinks.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className="px-3 py-2 text-sm font-medium rounded"
-                  style={{ color: "#202124" }}
-                  onClick={() => setMobileOpen(false)}
-                >
-                  {link.label}
-                </Link>
-              ))}
-              <hr style={{ border: "none", borderTop: "1px solid #dadce0", margin: "8px 0" }} />
-              <Link href="/signin" className="px-3 py-2 text-sm font-medium" style={{ color: "#1a73e8" }}>Sign in</Link>
-              <Link href="/start" className="px-3 py-2 text-sm font-medium text-center rounded text-white" style={{ background: "#1a73e8" }}>Start now</Link>
+            <nav className="flex flex-col px-4 py-3 gap-2">
+              <a href="tel:08007248349" className="px-3 py-2 text-sm flex items-center gap-2" style={{ color: "#1a73e8", fontWeight: 400 }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="#1a73e8"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg>
+                0800 724 8349
+              </a>
+              <Link href="/signin" className="px-3 py-2 text-sm text-center" style={{ color: "#1a73e8", border: "1px solid #dadce0", borderRadius: 24, fontWeight: 400 }}>Acesse sua conta</Link>
+              <Link href="/signin" className="px-3 py-2 text-sm text-center text-white" style={{ background: "#1a73e8", borderRadius: 24, fontWeight: 500 }}>Começar agora</Link>
             </nav>
           </motion.div>
         )}

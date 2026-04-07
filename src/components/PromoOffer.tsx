@@ -8,23 +8,23 @@ import { Check, Gift } from "lucide-react";
 const offers = [
   {
     id: "A",
-    spend: "$500",
-    credit: "$500",
-    description: "Spend $500 in your first 60 days and receive $500 in ad credit.",
+    spend: "R$ 500",
+    credit: "R$ 500",
+    description: "Gaste R$ 500 nos seus primeiros 60 dias e receba R$ 500 em crédito publicitário.",
     popular: false,
   },
   {
     id: "B",
-    spend: "$1,000",
-    credit: "$1,000",
-    description: "Spend $1,000 in your first 60 days and receive $1,000 in ad credit.",
+    spend: "R$ 1.000",
+    credit: "R$ 1.000",
+    description: "Gaste R$ 1.000 nos seus primeiros 60 dias e receba R$ 1.000 em crédito publicitário.",
     popular: true,
   },
   {
     id: "C",
-    spend: "$1,500",
-    credit: "$1,500",
-    description: "Spend $1,500 in your first 60 days and receive $1,500 in ad credit.",
+    spend: "R$ 1.500",
+    credit: "R$ 1.500",
+    description: "Gaste R$ 1.500 nos seus primeiros 60 dias e receba R$ 1.500 em crédito publicitário.",
     popular: false,
   },
 ];
@@ -43,13 +43,13 @@ export default function PromoOffer() {
         >
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-6" style={{ background: "#e8f0fe", color: "#1a73e8" }}>
             <Gift size={16} />
-            <span className="text-sm font-medium">Limited time offer for new advertisers</span>
+            <span className="text-sm" style={{ fontWeight: 500 }}>Oferta por tempo limitado para novos anunciantes</span>
           </div>
-          <h2 className="text-4xl font-normal mb-4" style={{ color: "#202124" }}>
-            Get up to $1,500 in free ad credit
+          <h2 className="text-4xl mb-4" style={{ color: "#202124", fontWeight: 400 }}>
+            Ganhe até R$ 1.500 em crédito publicitário gratuito
           </h2>
-          <p className="text-lg max-w-xl mx-auto" style={{ color: "#5f6368" }}>
-            New to Google Ads? Choose your offer and we&apos;ll match your spend with free ad credit to help you get started.
+          <p className="text-lg max-w-xl mx-auto" style={{ color: "#5f6368", fontWeight: 400 }}>
+            Novo no Google Ads? Escolha sua oferta e igualamos seu investimento com crédito gratuito para ajudá-lo a começar.
           </p>
         </motion.div>
 
@@ -69,13 +69,13 @@ export default function PromoOffer() {
               }}
             >
               {offer.popular && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-xs font-medium text-white" style={{ background: "#1a73e8" }}>
-                  Most popular
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-xs text-white" style={{ background: "#1a73e8", fontWeight: 500 }}>
+                  Mais popular
                 </div>
               )}
 
               <div className="flex items-center justify-between mb-3">
-                <span className="text-3xl font-light" style={{ color: "#1a73e8" }}>
+                <span className="text-3xl" style={{ color: "#1a73e8", fontWeight: 300 }}>
                   {offer.credit}
                 </span>
                 <div
@@ -88,9 +88,9 @@ export default function PromoOffer() {
                   {selected === offer.id && <Check size={12} color="#fff" strokeWidth={3} />}
                 </div>
               </div>
-              <p className="text-sm font-medium mb-1" style={{ color: "#202124" }}>in free credit</p>
-              <p className="text-xs" style={{ color: "#5f6368" }}>
-                When you spend {offer.spend}
+              <p className="text-sm mb-1" style={{ color: "#202124", fontWeight: 500 }}>em crédito gratuito</p>
+              <p className="text-xs" style={{ color: "#5f6368", fontWeight: 400 }}>
+                Ao gastar {offer.spend}
               </p>
             </motion.button>
           ))}
@@ -104,15 +104,15 @@ export default function PromoOffer() {
           >
             <Link
               href="/start"
-              className="inline-flex items-center gap-2 px-8 py-4 rounded text-white font-medium"
-              style={{ background: "#1a73e8", fontSize: 16 }}
+              className="inline-flex items-center gap-2 px-8 py-4 text-white"
+              style={{ background: "#1a73e8", fontSize: 16, borderRadius: 24, fontWeight: 500 }}
             >
               <Gift size={18} />
-              Claim your offer now
+              Resgatar oferta agora
             </Link>
-            <p className="mt-4 text-xs" style={{ color: "#9aa0a6" }}>
-              Offer available for new Google Ads accounts only. Terms and conditions apply.{" "}
-              <Link href="/terms" style={{ color: "#1a73e8" }}>Learn more</Link>
+            <p className="mt-4 text-xs" style={{ color: "#9aa0a6", fontWeight: 400 }}>
+              Oferta disponível apenas para novas contas do Google Ads. Termos e condições se aplicam.{" "}
+              <Link href="/terms" style={{ color: "#1a73e8" }}>Saiba mais</Link>
             </p>
           </motion.div>
         </div>

@@ -7,34 +7,34 @@ const benefits = [
   {
     icon: Globe,
     color: "#1a73e8",
-    title: "Reach the right customers",
-    description: "Show your ads to the right people at the right time. Google Ads gives you control over who sees your ads — by location, language, interests, device, and more.",
+    title: "Alcance os clientes certos",
+    description: "Exiba seus anúncios para as pessoas certas na hora certa. O Google Ads dá a você controle sobre quem vê seus anúncios — por localização, idioma, interesses, dispositivo e muito mais.",
     points: [
-      "Target by keyword, location, demographics",
-      "Reach people on Google Search, YouTube, Gmail & more",
-      "Advertise globally or just in your neighborhood",
+      "Segmente por palavra-chave, localização e dados demográficos",
+      "Alcance pessoas na Pesquisa Google, YouTube, Gmail e muito mais",
+      "Anuncie globalmente ou apenas na sua vizinhança",
     ],
   },
   {
     icon: BarChart3,
     color: "#34a853",
-    title: "Measure and optimize results",
-    description: "Know exactly what's working. Track clicks, calls, website visits, and sales — then use Google's AI to automatically optimize your campaigns.",
+    title: "Meça e otimize os resultados",
+    description: "Saiba exatamente o que está funcionando. Acompanhe cliques, chamadas, visitas ao site e vendas — depois use a IA do Google para otimizar automaticamente suas campanhas.",
     points: [
-      "Real-time performance reporting",
-      "Smart bidding powered by Google AI",
-      "Conversion tracking for calls, purchases & more",
+      "Relatórios de desempenho em tempo real",
+      "Lances inteligentes com tecnologia de IA do Google",
+      "Rastreamento de conversões para chamadas, compras e muito mais",
     ],
   },
   {
     icon: DollarSign,
     color: "#fbbc05",
-    title: "Control your budget",
-    description: "Start with any budget and only pay when someone clicks your ad. Set a daily budget cap so you never overspend — and adjust any time.",
+    title: "Controle seu orçamento",
+    description: "Comece com qualquer orçamento e pague apenas quando alguém clica no seu anúncio. Defina um limite de orçamento diário para nunca gastar mais do que o planejado — e ajuste quando quiser.",
     points: [
-      "No minimum spend required",
-      "Only pay per click (PPC) or impression",
-      "Set and change budgets at any time",
+      "Sem gasto mínimo obrigatório",
+      "Pague apenas por clique (CPC) ou impressão",
+      "Defina e altere orçamentos a qualquer momento",
     ],
   },
 ];
@@ -49,11 +49,11 @@ export default function Benefits() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
         >
-          <h2 className="text-4xl font-normal mb-4" style={{ color: "#202124" }}>
-            Why Google Ads?
+          <h2 className="text-4xl mb-4" style={{ color: "#202124", fontWeight: 400 }}>
+            Por que o Google Ads?
           </h2>
-          <p className="text-lg max-w-2xl mx-auto" style={{ color: "#5f6368" }}>
-            Google Ads gives businesses of all sizes the tools to grow — from local shops to global brands.
+          <p className="text-lg max-w-2xl mx-auto" style={{ color: "#5f6368", fontWeight: 400 }}>
+            O Google Ads oferece às empresas de todos os tamanhos as ferramentas para crescer — de lojas locais a marcas globais.
           </p>
         </motion.div>
 
@@ -74,11 +74,11 @@ export default function Benefits() {
                     <Icon size={30} color={b.color} />
                   </div>
                 </div>
-                <h3 className="text-2xl font-normal mb-4" style={{ color: "#202124" }}>{b.title}</h3>
-                <p className="text-base mb-5 leading-relaxed" style={{ color: "#5f6368" }}>{b.description}</p>
+                <h3 className="text-2xl mb-4" style={{ color: "#202124", fontWeight: 400 }}>{b.title}</h3>
+                <p className="text-base mb-5 leading-relaxed" style={{ color: "#5f6368", fontWeight: 400 }}>{b.description}</p>
                 <ul className="space-y-2">
                   {b.points.map((pt, j) => (
-                    <li key={j} className="flex items-start gap-2 text-sm" style={{ color: "#5f6368" }}>
+                    <li key={j} className="flex items-start gap-2 text-sm" style={{ color: "#5f6368", fontWeight: 400 }}>
                       <svg className="mt-0.5 shrink-0" width="16" height="16" viewBox="0 0 24 24" fill={b.color}>
                         <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/>
                       </svg>
@@ -101,15 +101,15 @@ export default function Benefits() {
         >
           <div className="flex flex-col md:flex-row items-center justify-between px-10 py-10 gap-6">
             <div className="text-white">
-              <h3 className="text-2xl font-normal mb-2">Google AI works for you</h3>
-              <p style={{ color: "rgba(255,255,255,0.85)", maxWidth: 480, fontSize: 15 }}>
-                Smart Bidding uses machine learning to automatically optimize bids for each auction — helping you get more conversions at the right price.
+              <h3 className="text-2xl mb-2" style={{ fontWeight: 400 }}>A IA do Google trabalha para você</h3>
+              <p style={{ color: "rgba(255,255,255,0.85)", maxWidth: 480, fontSize: 15, fontWeight: 400 }}>
+                O Smart Bidding usa machine learning para otimizar automaticamente os lances em cada leilão — ajudando você a obter mais conversões pelo preço certo.
               </p>
             </div>
             <div className="flex flex-col gap-3 text-center shrink-0">
               <div className="text-white">
-                <div className="text-5xl font-light">70%</div>
-                <div className="text-sm mt-1" style={{ color: "rgba(255,255,255,0.75)" }}>of advertisers see more conversions with Smart Bidding</div>
+                <div className="text-5xl" style={{ fontWeight: 300 }}>70%</div>
+                <div className="text-sm mt-1" style={{ color: "rgba(255,255,255,0.75)", fontWeight: 400 }}>dos anunciantes veem mais conversões com o Smart Bidding</div>
               </div>
             </div>
           </div>
