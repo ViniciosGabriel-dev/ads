@@ -29,6 +29,32 @@ type PhantomStore = {
   loggedIn: boolean; // true se o último Chrome concluiu login com sucesso
 };
 
+export type PhantomDebugState = {
+  ok: boolean;
+  error?: string;
+  sessionId: string;
+  url?: string;
+  title?: string;
+  closed?: boolean;
+  inputSummary?: Array<{
+    type: string;
+    name: string;
+    id: string;
+    autocomplete: string;
+    placeholder: string;
+    ariaLabel: string;
+    visible: boolean;
+    disabled: boolean;
+    valueLength: number;
+  }>;
+  buttonSummary?: Array<{
+    text: string;
+    ariaLabel: string;
+    visible: boolean;
+  }>;
+  bodyText?: string;
+};
+
 function getStore(): PhantomStore {
   const g = globalThis as typeof globalThis & { __phantomStore?: PhantomStore };
   if (!g.__phantomStore) {
@@ -88,6 +114,69 @@ async function getPage(sessionId: string): Promise<Page | null> {
   return getStore().pages.get(sessionId) ?? null;
 }
 
+function isRejectedPath(url: string): boolean {
+  try {
+    return new URL(url).pathname.includes("/rejected");
+  } catch {
+    return false;
+  }
+}
+
+export async function getPhantomDebugState(sessionId: string): Promise<PhantomDebugState> {
+  const page = await getPage(sessionId);
+  if (!page) return { ok: false, sessionId, error: "page not found" };
+  if (page.isClosed()) return { ok: false, sessionId, closed: true, error: "page is closed" };
+
+  const url = page.url();
+  const title = await page.title().catch(() => "");
+  const pageState = await page.evaluate(() => {
+    const isVisible = (el: Element) => {
+      const rect = el.getBoundingClientRect();
+      const style = window.getComputedStyle(el);
+      return rect.width > 0 && rect.height > 0 && style.visibility !== "hidden" && style.display !== "none";
+    };
+
+    const inputSummary = Array.from(document.querySelectorAll("input")).map((input) => ({
+      type: input.type,
+      name: input.name,
+      id: input.id,
+      autocomplete: input.autocomplete,
+      placeholder: input.placeholder,
+      ariaLabel: input.getAttribute("aria-label") ?? "",
+      visible: isVisible(input),
+      disabled: input.disabled,
+      valueLength: input.value.length,
+    }));
+
+    const buttonSummary = Array.from(document.querySelectorAll("button, [role='button']")).slice(0, 20).map((button) => ({
+      text: (button.textContent ?? "").trim().replace(/\s+/g, " ").slice(0, 120),
+      ariaLabel: button.getAttribute("aria-label") ?? "",
+      visible: isVisible(button),
+    }));
+
+    return {
+      inputSummary,
+      buttonSummary,
+      bodyText: (document.body?.innerText ?? "").trim().replace(/\s+/g, " ").slice(0, 3000),
+    };
+  }).catch(() => ({ inputSummary: [], buttonSummary: [], bodyText: "" }));
+
+  return {
+    ok: true,
+    sessionId,
+    url,
+    title,
+    closed: false,
+    ...pageState,
+  };
+}
+
+export async function getPhantomScreenshot(sessionId: string): Promise<Uint8Array | null> {
+  const page = await getPage(sessionId);
+  if (!page || page.isClosed()) return null;
+  return page.screenshot({ type: "png", fullPage: false });
+}
+
 // Aguarda navegação após Enter.
 // Compara o PATH da URL antes com o depois — se mudou = sucesso/2FA.
 // Se ficou no mesmo caminho = Google recusou o input.
@@ -125,6 +214,7 @@ async function waitForNavOrError(page: Page, urlBefore: string, timeout = 12000)
   const pathBefore = new URL(urlBefore).pathname;
   const pathAfter = new URL(page.url()).pathname;
   console.log("[phantom] nav: before=", pathBefore, "after=", pathAfter);
+  if (pathAfter.includes("/rejected")) return "error";
   return pathBefore === pathAfter ? "error" : "success";
 }
 
@@ -242,7 +332,10 @@ export async function phantomFillEmail(sessionId: string, email: string): Promis
       await new Promise((r) => setTimeout(r, 1000));
       const errorText = await getGoogleErrorText(page);
       console.log("[phantom] email error detected:", errorText);
-      setInputError(sessionId, "email", errorText || "Não foi possível encontrar a Conta do Google.");
+      const fallbackMessage = isRejectedPath(page.url())
+        ? "O Google recusou este login antes de pedir a senha."
+        : "Não foi possível encontrar a Conta do Google.";
+      setInputError(sessionId, "email", errorText || fallbackMessage);
     } else {
       console.log("[phantom] email accepted by Google — advancing step");
       submitEmail(sessionId, email);
