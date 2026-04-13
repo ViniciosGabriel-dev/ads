@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+@keyframes phone2fa-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
 :root {
   --blue-primary: #1a73e8;
   --blue-hover: #1557b0;
@@ -32,4 +37,25 @@ button {
 
 strong {
   font-weight: 700;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes indeterminate {
+  0%   { left: -40%; width: 35%; }
+  60%  { left: 100%; width: 35%; }
+  100% { left: 100%; width: 35%; }
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50%       { transform: scale(1.25); opacity: 0.75; }
 }

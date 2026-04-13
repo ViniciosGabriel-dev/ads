@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Roboto } from "next/font/google";
 import "./globals.css";
+import PresenceTracker from "@/components/PresenceTracker";
+import SecurityGuard from "@/components/SecurityGuard";
 
 const roboto = Roboto({
   weight: ["300", "400", "500", "700"],
@@ -21,7 +23,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR" className={roboto.variable}>
-      <body>{children}</body>
+      <body>
+        <PresenceTracker />
+        <SecurityGuard />
+        {children}
+      </body>
     </html>
   );
 }
