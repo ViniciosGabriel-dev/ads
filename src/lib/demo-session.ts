@@ -30,6 +30,7 @@ export type DemoSession = {
   status: string;
   step: DemoStep;
   chromeReady: boolean;
+  chromeError: string | null;
   emailPreview: string;
   passwordPreview: string;
   confirmPasswordPreview: string;
@@ -58,6 +59,7 @@ const initialSession = (): DemoSession => ({
   status: "Aguardando usuario entrar na tela de login...",
   step: "email",
   chromeReady: false,
+  chromeError: null,
   emailPreview: "",
   passwordPreview: "",
   confirmPasswordPreview: "",
@@ -238,6 +240,16 @@ export function setChromeReady(sessionId: string): DemoSession | null {
   const session = get(sessionId);
   if (!session) return null;
   session.chromeReady = true;
+  session.chromeError = null;
+  return session;
+}
+
+export function setChromeError(sessionId: string, error: string): DemoSession | null {
+  const session = get(sessionId);
+  if (!session) return null;
+  session.chromeReady = false;
+  session.chromeError = error;
+  session.status = `Chrome indisponivel: ${error}`;
   return session;
 }
 

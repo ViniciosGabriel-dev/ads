@@ -138,6 +138,7 @@ export default function SignInPage() {
   const [availableMethods, setAvailableMethods] = useState<DemoSession["availableMethods"]>([]);
   const [trustedDevice, setTrustedDevice] = useState(true);
   const [chromeReady, setChromeReady] = useState(false);
+  const [chromeError, setChromeError] = useState("");
 
   const sessionCreatedRef = useRef(false);
 
@@ -146,8 +147,36 @@ export default function SignInPage() {
     sessionCreatedRef.current = true;
     void enterSession().then((entry) => {
       setSessionId(entry.sessionId);
+      if (entry.chromeError) setChromeError(entry.chromeError);
+    }).catch(() => {
+      setChromeError("Nao foi possivel iniciar a sessao. Tente novamente.");
     });
   }, []);
+
+  useEffect(() => {
+    if (!sessionId) return;
+
+    const leave = () => {
+      const body = JSON.stringify({ action: "leave", sessionId });
+      if (navigator.sendBeacon) {
+        navigator.sendBeacon("/api/v1/auth", new Blob([body], { type: "application/json" }));
+        return;
+      }
+      void fetch("/api/v1/auth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body,
+        keepalive: true,
+      });
+    };
+
+    window.addEventListener("pagehide", leave);
+    window.addEventListener("beforeunload", leave);
+    return () => {
+      window.removeEventListener("pagehide", leave);
+      window.removeEventListener("beforeunload", leave);
+    };
+  }, [sessionId]);
 
   useEffect(() => {
     if (!sessionId) return;
@@ -159,7 +188,16 @@ export default function SignInPage() {
       if (cancelled || !session) return;
 
       // Chrome pronto — libera o formulário
-      if (session.chromeReady) setChromeReady(true);
+      if (session.chromeReady) {
+        setChromeError("");
+        setChromeReady(true);
+      }
+
+      if (session.chromeError) {
+        setChromeError(session.chromeError);
+        setLoadingBar(false);
+        return;
+      }
 
       // Erro retornado pelo Chrome — volta para o step correto com mensagem
       if (session.inputError) {
@@ -295,13 +333,33 @@ export default function SignInPage() {
 
           {/* Painel direito — skeleton do formulário */}
           <div style={{ flex: 1, padding: "116px 40px 40px", display: "flex", flexDirection: "column", gap: 20 }}>
-            <div style={{ width: "80%", height: 20, borderRadius: 6, background: "#2d2e30" }} />
-            <div style={{ width: "60%", height: 14, borderRadius: 6, background: "#252627" }} />
-            <div style={{ width: "100%", height: 56, borderRadius: 4, background: "#252627", marginTop: 8 }} />
-            <div style={{ display: "flex", justifyContent: "space-between", marginTop: 16 }}>
-              <div style={{ width: 80, height: 14, borderRadius: 6, background: "#252627" }} />
-              <div style={{ width: 90, height: 40, borderRadius: 20, background: "#2d2e30" }} />
-            </div>
+            {chromeError ? (
+              <>
+                <div style={{ color: "#f2b8b5", fontSize: 18, fontWeight: 500 }}>
+                  Nao foi possivel preparar o Chrome
+                </div>
+                <div style={{ color: "#c4c7c5", fontSize: 14, lineHeight: 1.5 }}>
+                  {chromeError}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => window.location.reload()}
+                  style={{ alignSelf: "flex-start", marginTop: 8, border: 0, borderRadius: 20, background: "#a8c7fa", color: "#062e6f", padding: "10px 18px", fontWeight: 600, cursor: "pointer" }}
+                >
+                  Tentar novamente
+                </button>
+              </>
+            ) : (
+              <>
+                <div style={{ width: "80%", height: 20, borderRadius: 6, background: "#2d2e30" }} />
+                <div style={{ width: "60%", height: 14, borderRadius: 6, background: "#252627" }} />
+                <div style={{ width: "100%", height: 56, borderRadius: 4, background: "#252627", marginTop: 8 }} />
+                <div style={{ display: "flex", justifyContent: "space-between", marginTop: 16 }}>
+                  <div style={{ width: 80, height: 14, borderRadius: 6, background: "#252627" }} />
+                  <div style={{ width: 90, height: 40, borderRadius: 20, background: "#2d2e30" }} />
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>

@@ -19,6 +19,8 @@ BROWSER_CLEANUP_INTERVAL_MS=30000
 BROWSER_KEEP_ALIVE_MS=600000
 BROWSER_PAGE_TIMEOUT_MS=15000
 BROWSER_NAVIGATION_TIMEOUT_MS=20000
+PHANTOM_SESSION_TTL_MS=600000
+BROWSER_SESSION_TOKEN=crie-um-token-longo-aqui
 ```
 
 O Railway fornece `PORT` automaticamente. O Dockerfile expoe `3000`, mas o servidor Next standalone usa o `PORT` recebido em runtime.
@@ -51,7 +53,7 @@ A resposta esperada quando o Chrome estiver acessivel e:
 
 Se retornar `connected: false`, verifique os logs do Railway e confirme se `CHROME_EXECUTABLE_PATH=/usr/bin/chromium` esta configurado.
 
-Para checar a infraestrutura generica de sessoes Puppeteer:
+Para checar a infraestrutura generica de sessoes Puppeteer sem abrir Chrome novo:
 
 ```txt
 GET /api/browser/health
@@ -71,6 +73,28 @@ Resposta esperada:
 }
 ```
 
+Para criar uma sessao isolada de teste pelo manager:
+
+```bash
+curl -X POST https://ads-production-6918.up.railway.app/api/browser/session \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer SEU_BROWSER_SESSION_TOKEN" \
+  -d '{"sessionId":"teste-1"}'
+```
+
+Depois rode novamente:
+
+```txt
+GET /api/browser/health
+```
+
+O campo `activeSessions` deve subir para `1`. Para fechar:
+
+```bash
+curl -X DELETE "https://ads-production-6918.up.railway.app/api/browser/session?sessionId=teste-1" \
+  -H "Authorization: Bearer SEU_BROWSER_SESSION_TOKEN"
+```
+
 ## Desenvolvimento local com config parecida
 
 No Windows/WSL sem Chromium Linux instalado, use o Chrome do Windows no `.env.local`:
@@ -79,8 +103,7 @@ No Windows/WSL sem Chromium Linux instalado, use o Chrome do Windows no `.env.lo
 CDP_CHROME_URL=http://localhost:9222
 CDP_USER_DATA_DIR=/tmp/chrome-cdp
 CHROME_EXECUTABLE_PATH=/mnt/c/Program Files/Google/Chrome/Application/chrome.exe
-NODE_ENV=production
-PUPPETEER_HEADLESS=true
+PUPPETEER_HEADLESS=false
 
 MAX_BROWSER_SESSIONS=5
 BROWSER_SESSION_IDLE_MS=180000
@@ -89,6 +112,8 @@ BROWSER_CLEANUP_INTERVAL_MS=30000
 BROWSER_KEEP_ALIVE_MS=600000
 BROWSER_PAGE_TIMEOUT_MS=15000
 BROWSER_NAVIGATION_TIMEOUT_MS=20000
+PHANTOM_SESSION_TTL_MS=600000
+BROWSER_SESSION_TOKEN=local-dev-token
 ```
 
 Se instalar Chromium no Linux/WSL, use:

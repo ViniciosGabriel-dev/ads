@@ -5,12 +5,22 @@ type BrowserSessionStatus = "active" | "closing" | "expired";
 
 type BrowserSession = {
   sessionId: string;
-  context: BrowserContext;
-  page: Page;
+  context: BrowserContext | null;
+  page: Page | null;
   createdAt: number;
   lastUsedAt: number;
   expiresAt: number;
   status: BrowserSessionStatus;
+  mode: "reserved" | "browser";
+};
+
+type BrowserSessionSummary = {
+  sessionId: string;
+  createdAt: number;
+  lastUsedAt: number;
+  expiresAt: number;
+  status: BrowserSessionStatus;
+  mode: "reserved" | "browser";
 };
 
 type BrowserHealth = {
@@ -37,6 +47,7 @@ const DEFAULT_CLEANUP_INTERVAL_MS = 30_000;
 const DEFAULT_BROWSER_KEEP_ALIVE_MS = 600_000;
 const DEFAULT_PAGE_TIMEOUT_MS = 15_000;
 const DEFAULT_NAVIGATION_TIMEOUT_MS = 20_000;
+const MANAGER_VERSION = 2;
 
 function readPositiveInt(name: string, fallback: number): number {
   const raw = process.env[name];
@@ -46,6 +57,7 @@ function readPositiveInt(name: string, fallback: number): number {
 }
 
 export class BrowserSessionManager {
+  readonly version = MANAGER_VERSION;
   private browser: Browser | null = null;
   private launchPromise: Promise<Browser> | null = null;
   private readonly sessions = new Map<string, BrowserSession>();
@@ -97,10 +109,50 @@ export class BrowserSessionManager {
       lastUsedAt: now,
       expiresAt: now + this.ttlMs,
       status: "active",
+      mode: "browser",
     };
 
     this.sessions.set(sessionId, session);
     console.log("[browser-manager] session created", {
+      sessionId,
+      activeSessions: this.activeSessionCount(),
+      maxSessions: this.maxSessions,
+    });
+    return session;
+  }
+
+  async reserveSession(sessionId: string): Promise<BrowserSession> {
+    await this.cleanupExpiredSessions();
+
+    const existing = this.sessions.get(sessionId);
+    if (existing && existing.status === "active") {
+      this.touchSession(sessionId);
+      return existing;
+    }
+
+    if (this.activeSessionCount() >= this.maxSessions) {
+      console.warn("[browser-manager] capacity reached", {
+        sessionId,
+        activeSessions: this.activeSessionCount(),
+        maxSessions: this.maxSessions,
+      });
+      throw new BrowserCapacityError(this.maxSessions);
+    }
+
+    const now = Date.now();
+    const session: BrowserSession = {
+      sessionId,
+      context: null,
+      page: null,
+      createdAt: now,
+      lastUsedAt: now,
+      expiresAt: now + this.ttlMs,
+      status: "active",
+      mode: "reserved",
+    };
+
+    this.sessions.set(sessionId, session);
+    console.log("[browser-manager] session reserved", {
       sessionId,
       activeSessions: this.activeSessionCount(),
       maxSessions: this.maxSessions,
@@ -118,6 +170,7 @@ export class BrowserSessionManager {
     }
 
     this.touchSession(sessionId);
+    if (!session.page) return null;
     return session.page;
   }
 
@@ -134,8 +187,8 @@ export class BrowserSessionManager {
     session.status = reason.includes("expired") ? "expired" : "closing";
 
     try {
-      await session.page.close().catch(() => {});
-      await session.context.close().catch(() => {});
+      await session.page?.close().catch(() => {});
+      await session.context?.close().catch(() => {});
     } finally {
       this.sessions.delete(sessionId);
       if (this.activeSessionCount() === 0) this.lastSessionClosedAt = Date.now();
@@ -147,13 +200,32 @@ export class BrowserSessionManager {
     }
   }
 
+  listSessions(): BrowserSessionSummary[] {
+    return [...this.sessions.values()].map((session) => ({
+      sessionId: session.sessionId,
+      createdAt: session.createdAt,
+      lastUsedAt: session.lastUsedAt,
+      expiresAt: session.expiresAt,
+      status: session.status,
+      mode: session.mode,
+    }));
+  }
+
+  getSession(sessionId: string): BrowserSessionSummary | null {
+    const session = this.sessions.get(sessionId);
+    if (!session) return null;
+    return {
+      sessionId: session.sessionId,
+      createdAt: session.createdAt,
+      lastUsedAt: session.lastUsedAt,
+      expiresAt: session.expiresAt,
+      status: session.status,
+      mode: session.mode,
+    };
+  }
+
   async getHealth(): Promise<BrowserHealth> {
-    try {
-      await this.ensureBrowser();
-    } catch (err) {
-      console.error("[browser-manager] healthcheck failed", err);
-      this.browser = null;
-    }
+    await this.checkBrowser();
 
     return {
       app: "ok",
@@ -264,7 +336,7 @@ export function getBrowserSessionManager(): BrowserSessionManager {
     __browserSessionManager?: BrowserSessionManager;
   };
 
-  if (!g.__browserSessionManager) {
+  if (!g.__browserSessionManager || g.__browserSessionManager.version !== MANAGER_VERSION) {
     g.__browserSessionManager = new BrowserSessionManager();
   }
 
