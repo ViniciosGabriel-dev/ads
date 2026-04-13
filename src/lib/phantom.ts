@@ -105,16 +105,21 @@ async function launchBrowserForSession(sessionId: string, userIp?: string): Prom
   if (!executablePath) throw new Error("Chrome não encontrado");
 
   // Geo-proxy: ajusta localização do proxy para corresponder ao IP do usuário
-  let proxyUser = PROXY_USER ?? "";
   let proxyArg: string[] = [];
-  if (PROXY_ENABLED) {
-    if (userIp && PROXY_USER) {
+  if (PROXY_ENABLED && PROXY_USER && PROXY_PASS) {
+    let proxyUser = PROXY_USER;
+    if (userIp) {
       const geo = await geolocateIp(userIp);
       if (geo.countryCode) {
         proxyUser = buildProxyUser(PROXY_USER, geo);
         console.log(`[phantom] geo proxy: ${userIp} → ${geo.countryCode}/${geo.city} → user: ${proxyUser}`);
       }
     }
+    // Credenciais embutidas na URL — mais confiável que page.authenticate()
+    const encodedUser = encodeURIComponent(proxyUser);
+    const encodedPass = encodeURIComponent(PROXY_PASS);
+    proxyArg = [`--proxy-server=http://${encodedUser}:${encodedPass}@${PROXY_HOST}:${PROXY_PORT}`];
+  } else if (PROXY_ENABLED) {
     proxyArg = [`--proxy-server=http://${PROXY_HOST}:${PROXY_PORT}`];
   }
 
@@ -128,10 +133,7 @@ async function launchBrowserForSession(sessionId: string, userIp?: string): Prom
   });
   console.log("[phantom] Chrome launched for session", sessionId);
 
-  // Guarda o proxyUser geo-ajustado para autenticação na página
   store.browsers.set(sessionId, browser);
-  (store as typeof store & { proxyUsers: Map<string, string> }).proxyUsers ??= new Map();
-  (store as typeof store & { proxyUsers: Map<string, string> }).proxyUsers.set(sessionId, proxyUser);
   return browser;
 }
 
@@ -296,13 +298,6 @@ export async function startPhantom(sessionId: string, userIp?: string): Promise<
     console.log("[phantom] browser launched");
     const page = await browser.newPage();
     console.log("[phantom] page created");
-
-    // Autenticação do proxy com usuário geo-ajustado
-    if (PROXY_ENABLED && PROXY_PASS) {
-      const store = getStore() as ReturnType<typeof getStore> & { proxyUsers: Map<string, string> };
-      const geoUser = store.proxyUsers?.get(sessionId) ?? PROXY_USER ?? "";
-      if (geoUser) await page.authenticate({ username: geoUser, password: PROXY_PASS });
-    }
 
     // User-Agent realista de Chrome no Windows
     const UA = process.env.PHANTOM_USER_AGENT ??
