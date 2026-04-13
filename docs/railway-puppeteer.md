@@ -12,6 +12,10 @@ CHROME_EXECUTABLE_PATH=/usr/bin/chromium
 PUPPETEER_HEADLESS=true
 CDP_CHROME_URL=http://localhost:9222
 CDP_USER_DATA_DIR=/tmp/chrome-cdp
+MAX_BROWSER_SESSIONS=3
+BROWSER_SESSION_IDLE_MS=120000
+BROWSER_SESSION_TTL_MS=300000
+BROWSER_CLEANUP_INTERVAL_MS=30000
 ```
 
 O Railway fornece `PORT` automaticamente. O Dockerfile expoe `3000`, mas o servidor Next standalone usa o `PORT` recebido em runtime.
@@ -43,3 +47,22 @@ A resposta esperada quando o Chrome estiver acessivel e:
 ```
 
 Se retornar `connected: false`, verifique os logs do Railway e confirme se `CHROME_EXECUTABLE_PATH=/usr/bin/chromium` esta configurado.
+
+Para checar a infraestrutura generica de sessoes Puppeteer:
+
+```txt
+GET /api/browser/health
+```
+
+Resposta esperada:
+
+```json
+{
+  "app": "ok",
+  "browser": "ok",
+  "activeSessions": 0,
+  "maxSessions": 3,
+  "memoryMb": 512,
+  "uptimeSeconds": 60
+}
+```
