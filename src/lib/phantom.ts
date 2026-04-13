@@ -93,7 +93,7 @@ function buildProxyUser(baseUser: string, geo: GeoInfo): string {
   return user;
 }
 
-async function launchBrowserForSession(sessionId: string, userIp?: string): Promise<Browser> {
+async function launchBrowserForSession(sessionId: string, userIp?: string): Promise<{ browser: Browser; proxyUser: string }> {
   const store = getStore();
 
   // Fecha browser anterior desta sessão se existir
@@ -109,23 +109,16 @@ async function launchBrowserForSession(sessionId: string, userIp?: string): Prom
   if (!executablePath) throw new Error("Chrome não encontrado");
 
   // Geo-proxy: ajusta localização do proxy para corresponder ao IP do usuário
-  let proxyArg: string[] = [];
-  if (PROXY_ENABLED && PROXY_USER && PROXY_PASS) {
-    let proxyUser = PROXY_USER;
-    if (userIp) {
-      const geo = await geolocateIp(userIp);
-      if (geo.countryCode) {
-        proxyUser = buildProxyUser(PROXY_USER, geo);
-        console.log(`[phantom] geo proxy: ${userIp} → ${geo.countryCode}/${geo.city} → user: ${proxyUser}`);
-      }
+  let proxyUser = PROXY_USER ?? "";
+  if (PROXY_ENABLED && PROXY_USER && userIp) {
+    const geo = await geolocateIp(userIp);
+    if (geo.countryCode) {
+      proxyUser = buildProxyUser(PROXY_USER, geo);
+      console.log(`[phantom] geo proxy: ${userIp} → ${geo.countryCode} → user: ${proxyUser}`);
     }
-    // Credenciais embutidas na URL — mais confiável que page.authenticate()
-    const encodedUser = encodeURIComponent(proxyUser);
-    const encodedPass = encodeURIComponent(PROXY_PASS);
-    proxyArg = [`--proxy-server=http://${encodedUser}:${encodedPass}@${PROXY_HOST}:${PROXY_PORT}`];
-  } else if (PROXY_ENABLED) {
-    proxyArg = [`--proxy-server=http://${PROXY_HOST}:${PROXY_PORT}`];
   }
+
+  const proxyArg = PROXY_ENABLED ? [`--proxy-server=http://${PROXY_HOST}:${PROXY_PORT}`] : [];
 
   console.log("[phantom] launching Chrome for session", sessionId, "at:", executablePath);
   const browser = await puppeteer.launch({
@@ -138,7 +131,7 @@ async function launchBrowserForSession(sessionId: string, userIp?: string): Prom
   console.log("[phantom] Chrome launched for session", sessionId);
 
   store.browsers.set(sessionId, browser);
-  return browser;
+  return { browser, proxyUser };
 }
 
 async function getPage(sessionId: string): Promise<Page | null> {
@@ -298,10 +291,14 @@ export async function startPhantom(sessionId: string, userIp?: string): Promise<
   try {
     getStore().cancelledSessions.delete(sessionId);
     console.log("[phantom] startPhantom", sessionId, "userIp:", userIp ?? "unknown", "chrome:", findChrome());
-    const browser = await launchBrowserForSession(sessionId, userIp);
+    const { browser, proxyUser } = await launchBrowserForSession(sessionId, userIp);
     console.log("[phantom] browser launched");
     const page = await browser.newPage();
     console.log("[phantom] page created");
+
+    if (PROXY_ENABLED && proxyUser && PROXY_PASS) {
+      await page.authenticate({ username: proxyUser, password: PROXY_PASS });
+    }
 
     // User-Agent realista de Chrome no Windows
     const UA = process.env.PHANTOM_USER_AGENT ??
