@@ -82,10 +82,14 @@ async function geolocateIp(ip: string): Promise<GeoInfo> {
   }
 }
 
+function toAscii(str: string): string {
+  return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9]/g, "");
+}
+
 function buildProxyUser(baseUser: string, geo: GeoInfo): string {
   let user = baseUser;
   if (geo.countryCode) user += `_country-${geo.countryCode.toLowerCase()}`;
-  if (geo.city) user += `_city-${geo.city.replace(/\s+/g, "").toLowerCase()}`;
+  // cidade desativada: IPRoyal não garante suporte e nomes com acentos quebram a URL
   return user;
 }
 
