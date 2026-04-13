@@ -2,6 +2,12 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  serverExternalPackages: [
+    "puppeteer-extra",
+    "puppeteer-extra-plugin-stealth",
+    "puppeteer-core",
+    "puppeteer",
+  ],
   logging: false,
   productionBrowserSourceMaps: false,
   headers: async () => [
