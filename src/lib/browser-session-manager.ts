@@ -18,6 +18,7 @@ type BrowserHealth = {
   browser: "ok" | "down";
   activeSessions: number;
   maxSessions: number;
+  keepAliveMs: number;
   memoryMb: number;
   uptimeSeconds: number;
 };
@@ -29,10 +30,13 @@ export class BrowserCapacityError extends Error {
   }
 }
 
-const DEFAULT_MAX_SESSIONS = 3;
-const DEFAULT_IDLE_MS = 120_000;
-const DEFAULT_TTL_MS = 300_000;
+const DEFAULT_MAX_SESSIONS = 5;
+const DEFAULT_IDLE_MS = 180_000;
+const DEFAULT_TTL_MS = 600_000;
 const DEFAULT_CLEANUP_INTERVAL_MS = 30_000;
+const DEFAULT_BROWSER_KEEP_ALIVE_MS = 600_000;
+const DEFAULT_PAGE_TIMEOUT_MS = 15_000;
+const DEFAULT_NAVIGATION_TIMEOUT_MS = 20_000;
 
 function readPositiveInt(name: string, fallback: number): number {
   const raw = process.env[name];
@@ -47,11 +51,15 @@ export class BrowserSessionManager {
   private readonly sessions = new Map<string, BrowserSession>();
   private cleanupTimer: NodeJS.Timeout | null = null;
   private readonly startedAt = Date.now();
+  private lastSessionClosedAt = Date.now();
 
   readonly maxSessions = readPositiveInt("MAX_BROWSER_SESSIONS", DEFAULT_MAX_SESSIONS);
   private readonly idleMs = readPositiveInt("BROWSER_SESSION_IDLE_MS", DEFAULT_IDLE_MS);
   private readonly ttlMs = readPositiveInt("BROWSER_SESSION_TTL_MS", DEFAULT_TTL_MS);
   private readonly cleanupIntervalMs = readPositiveInt("BROWSER_CLEANUP_INTERVAL_MS", DEFAULT_CLEANUP_INTERVAL_MS);
+  private readonly keepAliveMs = readPositiveInt("BROWSER_KEEP_ALIVE_MS", DEFAULT_BROWSER_KEEP_ALIVE_MS);
+  private readonly pageTimeoutMs = readPositiveInt("BROWSER_PAGE_TIMEOUT_MS", DEFAULT_PAGE_TIMEOUT_MS);
+  private readonly navigationTimeoutMs = readPositiveInt("BROWSER_NAVIGATION_TIMEOUT_MS", DEFAULT_NAVIGATION_TIMEOUT_MS);
 
   constructor() {
     this.startCleanup();
@@ -78,6 +86,8 @@ export class BrowserSessionManager {
     const browser = await this.ensureBrowser();
     const context = await browser.createBrowserContext();
     const page = await context.newPage();
+    page.setDefaultTimeout(this.pageTimeoutMs);
+    page.setDefaultNavigationTimeout(this.navigationTimeoutMs);
     const now = Date.now();
     const session: BrowserSession = {
       sessionId,
@@ -128,6 +138,7 @@ export class BrowserSessionManager {
       await session.context.close().catch(() => {});
     } finally {
       this.sessions.delete(sessionId);
+      if (this.activeSessionCount() === 0) this.lastSessionClosedAt = Date.now();
       console.log("[browser-manager] session closed", {
         sessionId,
         reason,
@@ -149,6 +160,7 @@ export class BrowserSessionManager {
       browser: this.browser ? "ok" : "down",
       activeSessions: this.activeSessionCount(),
       maxSessions: this.maxSessions,
+      keepAliveMs: this.keepAliveMs,
       memoryMb: Math.round(process.memoryUsage().rss / 1024 / 1024),
       uptimeSeconds: Math.round((Date.now() - this.startedAt) / 1000),
     };
@@ -224,6 +236,7 @@ export class BrowserSessionManager {
     }
 
     await this.checkBrowser();
+    await this.closeIdleBrowser(now);
   }
 
   private isExpired(session: BrowserSession, now: number): boolean {
@@ -232,6 +245,17 @@ export class BrowserSessionManager {
 
   private activeSessionCount(): number {
     return [...this.sessions.values()].filter((session) => session.status === "active").length;
+  }
+
+  private async closeIdleBrowser(now: number): Promise<void> {
+    if (!this.browser || this.activeSessionCount() > 0) return;
+    if (now - this.lastSessionClosedAt < this.keepAliveMs) return;
+
+    console.log("[browser-manager] closing idle browser", {
+      keepAliveMs: this.keepAliveMs,
+    });
+    await this.browser.close().catch(() => {});
+    this.browser = null;
   }
 }
 
