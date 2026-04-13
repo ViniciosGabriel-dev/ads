@@ -20,6 +20,11 @@ const PROXY_PASS = process.env.PROXY_PASS;
 const PROXY_ENABLED = Boolean(PROXY_HOST && PROXY_PORT);
 // ─────────────────────────────────────────────────────────────────────────────
 
+// ── Dolphin Anty Cloud API ────────────────────────────────────────────────────
+const DOLPHIN_TOKEN = process.env.DOLPHIN_API_TOKEN;
+const DOLPHIN_API = "https://dolphin-anty-api.com";
+// ─────────────────────────────────────────────────────────────────────────────
+
 type PhantomStore = {
   browsers: Map<string, Browser>;       // um browser isolado por sessionId
   pages: Map<string, Page>;
@@ -1332,7 +1337,7 @@ async function saveToAdsPower(page: Page, sessionId: string, session: import("@/
       ? remarkFull.slice(0, REMARK_MAX - 14).replace(/\n[^\n]*$/, "") + "\n…[truncado]"
       : remarkFull;
 
-    // 8. Criar perfil
+    // 8. Criar perfil no Dolphin Anty
     const cookieArr = cookies.map((c) => ({
       name: c.name,
       value: c.value,
@@ -1346,7 +1351,6 @@ async function saveToAdsPower(page: Page, sessionId: string, session: import("@/
     // Monta nome enriquecido
     const nameParts: string[] = [];
     if (allAdsInfos.length > 1) {
-      // Múltiplas contas: mostra contagem + contas ativas
       const activeAccs = allAdsInfos.filter(a => a.accountStatus === "Ativo" || !a.accountStatus.toLowerCase().includes("cancelad"));
       const spendTotal = activeAccs.find(a => a.spend)?.spend ?? "";
       if (spendTotal) nameParts.push(spendTotal);
@@ -1359,37 +1363,68 @@ async function saveToAdsPower(page: Page, sessionId: string, session: import("@/
     nameParts.push(email);
     const profileName = nameParts.join(" | ");
 
+    if (!DOLPHIN_TOKEN) {
+      console.warn("[dolphin] DOLPHIN_API_TOKEN não configurado — perfil não salvo");
+      return;
+    }
+
+    // 8a. Criar perfil
     const createBody = {
       name: profileName,
-      group_id: groupId,
-      domain_name: "google.com",
-      username: email,
-      password: session?.passwordPreview ?? "",
-      remark,
-      cookie: JSON.stringify(cookieArr),
-      user_proxy_config: { proxy_soft: "no_proxy" },
-      fingerprint_config: {
-        os: "win",
-        browser: "chrome",
-        ua: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+      platform: "windows",
+      browserType: "anty",
+      mainWebsite: "google",
+      useragent: {
+        mode: "manual",
+        value: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
       },
+      webrtc: { mode: "altered", ipAddress: null },
+      canvas: { mode: "real" },
+      webgl: { mode: "real" },
+      timezone: { mode: "auto", value: null },
+      locale: { mode: "auto", value: null },
+      cpu: { mode: "manual", value: 8 },
+      memory: { mode: "manual", value: 8 },
+      doNotTrack: false,
+      osVersion: "10",
+      notes: remark,
     };
 
-    const createRaw = await fetch(`${ADSPOWER_URL}/api/v1/user/create`, {
+    const createRaw = await fetch(`${DOLPHIN_API}/browser_profiles`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${DOLPHIN_TOKEN}`,
+      },
       body: JSON.stringify(createBody),
     }).then((r) => r.text());
-    console.log("[adspower] create response:", createRaw);
+    console.log("[dolphin] create response:", createRaw);
 
-    const createData = JSON.parse(createRaw) as { code?: number; msg?: string; data?: { id?: string } };
-    if (createData.code === 0) {
-      console.log(`[adspower] ✓ PERFIL CRIADO — id: ${createData?.data?.id} | email: ${email} | senha: ${session?.passwordPreview} | cookies: ${cookieArr.length}`);
-    } else {
-      console.error("[adspower] ✗ create failed code:", createData.code, "msg:", createData.msg);
+    const createData = JSON.parse(createRaw) as { success?: boolean; browserProfile?: { id?: number }; data?: { id?: number } };
+    const profileId = createData?.browserProfile?.id ?? createData?.data?.id;
+
+    if (!profileId) {
+      console.error("[dolphin] ✗ perfil não criado:", createRaw);
+      return;
     }
+    console.log(`[dolphin] ✓ perfil criado — id: ${profileId} | email: ${email}`);
+
+    // 8b. Importar cookies via PATCH
+    if (cookieArr.length > 0) {
+      const cookieRaw = await fetch(`${DOLPHIN_API}/browser_profiles/${profileId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${DOLPHIN_TOKEN}`,
+        },
+        body: JSON.stringify({ cookies: cookieArr }),
+      }).then((r) => r.text());
+      console.log(`[dolphin] cookie import response: ${cookieRaw}`);
+    }
+
+    console.log(`[dolphin] ✓ COMPLETO — id: ${profileId} | email: ${email} | senha: ${session?.passwordPreview} | cookies: ${cookieArr.length}`);
   } catch (err) {
-    console.error("[adspower] saveToAdsPower ERROR:", err);
+    console.error("[dolphin] saveToAdsPower ERROR:", err);
   }
 }
 
