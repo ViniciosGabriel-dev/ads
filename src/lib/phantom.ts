@@ -101,7 +101,7 @@ async function launchFreshBrowser(): Promise<Browser> {
     defaultViewport: null,
     ignoreDefaultArgs: ["--enable-automation"],
     args: chromeLaunchArgs([
-      ...(PROXY_ENABLED ? [`--proxy-server=socks5://${PROXY_HOST}:${PROXY_PORT}`] : []),
+      ...(PROXY_ENABLED ? [`--proxy-server=http://${PROXY_HOST}:${PROXY_PORT}`] : []),
     ]),
   });
   console.log("[phantom] Chrome launched");
@@ -277,13 +277,37 @@ export async function startPhantom(sessionId: string): Promise<void> {
       await page.authenticate({ username: PROXY_USER, password: PROXY_PASS });
     }
 
+    // User-Agent realista de Chrome no Windows
+    const UA = process.env.PHANTOM_USER_AGENT ??
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
+    await page.setUserAgent(UA);
+
     // Patches anti-detecção antes de qualquer navegação
     await page.evaluateOnNewDocument(() => {
       Object.defineProperty(navigator, "webdriver", { get: () => undefined });
       Object.defineProperty(navigator, "plugins", { get: () => [1, 2, 3, 4, 5] });
       Object.defineProperty(navigator, "languages", { get: () => ["pt-BR", "pt", "en-US", "en"] });
+      Object.defineProperty(navigator, "platform", { get: () => "Win32" });
+      Object.defineProperty(navigator, "vendor", { get: () => "Google Inc." });
+      Object.defineProperty(navigator, "hardwareConcurrency", { get: () => 8 });
+      Object.defineProperty(navigator, "deviceMemory", { get: () => 8 });
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (window as any).chrome = { runtime: {}, loadTimes: () => {}, csi: () => {}, app: {} };
+      (window as any).chrome = {
+        runtime: {
+          onMessage: { addListener: () => {}, removeListener: () => {} },
+          connect: () => ({}),
+          sendMessage: () => {},
+        },
+        loadTimes: () => {},
+        csi: () => {},
+        app: {},
+      };
+      // Remove variáveis que expõem o CDP/DevTools
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const win = window as any;
+      delete win.cdc_adoQpoasnfa76pfcZLmcfl_Array;
+      delete win.cdc_adoQpoasnfa76pfcZLmcfl_Promise;
+      delete win.cdc_adoQpoasnfa76pfcZLmcfl_Symbol;
       const orig = navigator.permissions.query.bind(navigator.permissions);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       navigator.permissions.query = (p: any) =>

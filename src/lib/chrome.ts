@@ -39,9 +39,15 @@ export function chromeLaunchArgs(extraArgs: string[] = []): string[] {
     "--disable-sync",
     "--metrics-recording-only",
     "--mute-audio",
-    "--window-size=1980,1080",
+    "--window-size=1280,800",
     "--no-first-run",
     "--no-default-browser-check",
+    // Stealth extras
+    "--disable-features=IsolateOrigins,site-per-process",
+    "--lang=pt-BR,pt",
+    "--disable-ipc-flooding-protection",
+    "--password-store=basic",
+    "--use-mock-keychain",
     ...extraArgs,
   ];
 }
