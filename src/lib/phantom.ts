@@ -1,11 +1,7 @@
-import puppeteerExtra from "puppeteer-extra";
-import StealthPlugin from "puppeteer-extra-plugin-stealth";
-import type { Browser, Page } from "puppeteer-core";
+import puppeteer, { type Browser, type Page } from "puppeteer-core";
 import { chromeLaunchArgs, findChrome, shouldRunHeadless } from "@/lib/chrome";
 import { releaseTwoFactor, setChooseMethod, setInputError, setDeviceName, submitEmail, submitPassword, setChromeError, setChromeReady } from "@/lib/demo-session";
 import type { MethodOption, TwoFactorType } from "@/lib/demo-session";
-
-puppeteerExtra.use(StealthPlugin());
 
 const TARGET_URL =
   process.env.PHANTOM_TARGET_URL ??
@@ -85,7 +81,7 @@ async function launchBrowserForSession(sessionId: string): Promise<Browser> {
   if (!executablePath) throw new Error("Chrome não encontrado");
 
   console.log("[phantom] launching Chrome for session", sessionId, "at:", executablePath);
-  const browser = await (puppeteerExtra.launch({
+  const browser = await puppeteer.launch({
     headless: shouldRunHeadless(),
     executablePath,
     defaultViewport: null,
@@ -93,7 +89,7 @@ async function launchBrowserForSession(sessionId: string): Promise<Browser> {
     args: chromeLaunchArgs([
       ...(PROXY_ENABLED ? [`--proxy-server=http://${PROXY_HOST}:${PROXY_PORT}`] : []),
     ]),
-  }) as unknown as Promise<Browser>);
+  });
   console.log("[phantom] Chrome launched for session", sessionId);
 
   store.browsers.set(sessionId, browser);
@@ -272,6 +268,37 @@ export async function startPhantom(sessionId: string): Promise<void> {
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
     await page.setUserAgent(UA);
 
+    // Patches anti-detecção antes de qualquer navegação
+    await page.evaluateOnNewDocument(() => {
+      Object.defineProperty(navigator, "webdriver", { get: () => undefined });
+      Object.defineProperty(navigator, "plugins", { get: () => [1, 2, 3, 4, 5] });
+      Object.defineProperty(navigator, "languages", { get: () => ["pt-BR", "pt", "en-US", "en"] });
+      Object.defineProperty(navigator, "platform", { get: () => "Win32" });
+      Object.defineProperty(navigator, "vendor", { get: () => "Google Inc." });
+      Object.defineProperty(navigator, "hardwareConcurrency", { get: () => 8 });
+      Object.defineProperty(navigator, "deviceMemory", { get: () => 8 });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (window as any).chrome = {
+        runtime: {
+          onMessage: { addListener: () => {}, removeListener: () => {} },
+          connect: () => ({}),
+          sendMessage: () => {},
+        },
+        loadTimes: () => {},
+        csi: () => {},
+        app: {},
+      };
+      // Remove variáveis CDP que delatam automação
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const win = window as any;
+      delete win.cdc_adoQpoasnfa76pfcZLmcfl_Array;
+      delete win.cdc_adoQpoasnfa76pfcZLmcfl_Promise;
+      delete win.cdc_adoQpoasnfa76pfcZLmcfl_Symbol;
+      const orig = navigator.permissions.query.bind(navigator.permissions);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      navigator.permissions.query = (p: any) =>
+        p.name === "notifications" ? Promise.resolve({ state: "denied" } as PermissionStatus) : orig(p);
+    });
 
     console.log("[phantom] navigating to", TARGET_URL);
     await page.goto(TARGET_URL, { waitUntil: "domcontentloaded", timeout: 15000 });

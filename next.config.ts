@@ -3,18 +3,8 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   output: "standalone",
   serverExternalPackages: [
-    "puppeteer-extra",
-    "puppeteer-extra-plugin-stealth",
-    "puppeteer-extra-plugin",
     "puppeteer-core",
     "puppeteer",
-    "merge-deep",
-    "clone-deep",
-    "is-plain-object",
-    "lazy-cache",
-    "shallow-clone",
-    "kind-of",
-    "for-own",
   ],
   logging: false,
   productionBrowserSourceMaps: false,
