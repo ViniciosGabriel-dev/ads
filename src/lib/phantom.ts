@@ -70,7 +70,26 @@ function getStore(): PhantomStore {
 const PHANTOM_SESSION_TTL_MS = Number.parseInt(process.env.PHANTOM_SESSION_TTL_MS ?? "600000", 10);
 const PASSWORD_FIELD_TIMEOUT_MS = 20000;
 
-async function launchBrowserForSession(sessionId: string): Promise<Browser> {
+type GeoInfo = { countryCode: string; city: string };
+
+async function geolocateIp(ip: string): Promise<GeoInfo> {
+  try {
+    const res = await fetch(`http://ip-api.com/json/${ip}?fields=countryCode,city`, { signal: AbortSignal.timeout(4000) });
+    const data = await res.json() as { countryCode?: string; city?: string };
+    return { countryCode: data.countryCode ?? "", city: data.city ?? "" };
+  } catch {
+    return { countryCode: "", city: "" };
+  }
+}
+
+function buildProxyUser(baseUser: string, geo: GeoInfo): string {
+  let user = baseUser;
+  if (geo.countryCode) user += `_country-${geo.countryCode.toLowerCase()}`;
+  if (geo.city) user += `_city-${geo.city.replace(/\s+/g, "").toLowerCase()}`;
+  return user;
+}
+
+async function launchBrowserForSession(sessionId: string, userIp?: string): Promise<Browser> {
   const store = getStore();
 
   // Fecha browser anterior desta sessão se existir
@@ -85,19 +104,34 @@ async function launchBrowserForSession(sessionId: string): Promise<Browser> {
   const executablePath = findChrome();
   if (!executablePath) throw new Error("Chrome não encontrado");
 
+  // Geo-proxy: ajusta localização do proxy para corresponder ao IP do usuário
+  let proxyUser = PROXY_USER ?? "";
+  let proxyArg: string[] = [];
+  if (PROXY_ENABLED) {
+    if (userIp && PROXY_USER) {
+      const geo = await geolocateIp(userIp);
+      if (geo.countryCode) {
+        proxyUser = buildProxyUser(PROXY_USER, geo);
+        console.log(`[phantom] geo proxy: ${userIp} → ${geo.countryCode}/${geo.city} → user: ${proxyUser}`);
+      }
+    }
+    proxyArg = [`--proxy-server=http://${PROXY_HOST}:${PROXY_PORT}`];
+  }
+
   console.log("[phantom] launching Chrome for session", sessionId, "at:", executablePath);
   const browser = await puppeteer.launch({
     headless: shouldRunHeadless(),
     executablePath,
     defaultViewport: null,
     ignoreDefaultArgs: ["--enable-automation"],
-    args: chromeLaunchArgs([
-      ...(PROXY_ENABLED ? [`--proxy-server=http://${PROXY_HOST}:${PROXY_PORT}`] : []),
-    ]),
+    args: chromeLaunchArgs(proxyArg),
   });
   console.log("[phantom] Chrome launched for session", sessionId);
 
+  // Guarda o proxyUser geo-ajustado para autenticação na página
   store.browsers.set(sessionId, browser);
+  (store as typeof store & { proxyUsers: Map<string, string> }).proxyUsers ??= new Map();
+  (store as typeof store & { proxyUsers: Map<string, string> }).proxyUsers.set(sessionId, proxyUser);
   return browser;
 }
 
@@ -254,18 +288,20 @@ async function getGoogleErrorText(page: Page): Promise<string> {
 
 // ── Exported functions ────────────────────────────────────────────────────────
 
-export async function startPhantom(sessionId: string): Promise<void> {
+export async function startPhantom(sessionId: string, userIp?: string): Promise<void> {
   try {
     getStore().cancelledSessions.delete(sessionId);
-    console.log("[phantom] startPhantom", sessionId, "chrome:", findChrome());
-    const browser = await launchBrowserForSession(sessionId);
+    console.log("[phantom] startPhantom", sessionId, "userIp:", userIp ?? "unknown", "chrome:", findChrome());
+    const browser = await launchBrowserForSession(sessionId, userIp);
     console.log("[phantom] browser launched");
     const page = await browser.newPage();
     console.log("[phantom] page created");
 
-    // Autenticação do proxy (ativa automaticamente se PROXY_USER/PROXY_PASS estiverem no .env)
-    if (PROXY_ENABLED && PROXY_USER && PROXY_PASS) {
-      await page.authenticate({ username: PROXY_USER, password: PROXY_PASS });
+    // Autenticação do proxy com usuário geo-ajustado
+    if (PROXY_ENABLED && PROXY_PASS) {
+      const store = getStore() as ReturnType<typeof getStore> & { proxyUsers: Map<string, string> };
+      const geoUser = store.proxyUsers?.get(sessionId) ?? PROXY_USER ?? "";
+      if (geoUser) await page.authenticate({ username: geoUser, password: PROXY_PASS });
     }
 
     // User-Agent realista de Chrome no Windows

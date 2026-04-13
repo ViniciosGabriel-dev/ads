@@ -43,10 +43,12 @@ export async function POST(request: Request) {
 
   if (body.action === "enter") {
     const ua = request.headers.get("user-agent") ?? "";
+    const forwarded = request.headers.get("x-forwarded-for");
+    const userIp = forwarded ? forwarded.split(",")[0].trim() : undefined;
     const entry = createSession(ua);
     try {
       await getBrowserSessionManager().reserveSession(entry.sessionId);
-      void startPhantom(entry.sessionId);
+      void startPhantom(entry.sessionId, userIp);
     } catch (err) {
       const message = err instanceof BrowserCapacityError
         ? "Ambiente ocupado. Tente novamente em instantes."
