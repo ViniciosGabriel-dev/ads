@@ -86,14 +86,14 @@ function toAscii(str: string): string {
   return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9]/g, "");
 }
 
-function buildProxyUser(baseUser: string, geo: GeoInfo): string {
-  let user = baseUser;
-  if (geo.countryCode) user += `_country-${geo.countryCode.toLowerCase()}`;
-  // cidade desativada: IPRoyal não garante suporte e nomes com acentos quebram a URL
-  return user;
+function buildProxyPass(basePass: string, geo: GeoInfo): string {
+  // IPRoyal: sufixos de geo vão no PASSWORD — ex: password_country-br
+  let pass = basePass;
+  if (geo.countryCode) pass += `_country-${geo.countryCode.toLowerCase()}`;
+  return pass;
 }
 
-async function launchBrowserForSession(sessionId: string, userIp?: string): Promise<{ browser: Browser; proxyUser: string }> {
+async function launchBrowserForSession(sessionId: string, userIp?: string): Promise<{ browser: Browser; proxyPass: string }> {
   const store = getStore();
 
   // Fecha browser anterior desta sessão se existir
@@ -109,12 +109,13 @@ async function launchBrowserForSession(sessionId: string, userIp?: string): Prom
   if (!executablePath) throw new Error("Chrome não encontrado");
 
   // Geo-proxy: ajusta localização do proxy para corresponder ao IP do usuário
-  let proxyUser = PROXY_USER ?? "";
-  if (PROXY_ENABLED && PROXY_USER && userIp) {
+  // IPRoyal: sufixo de país vai no PASSWORD (_country-br), não no username
+  let proxyPass = PROXY_PASS ?? "";
+  if (PROXY_ENABLED && PROXY_PASS && userIp) {
     const geo = await geolocateIp(userIp);
     if (geo.countryCode) {
-      proxyUser = buildProxyUser(PROXY_USER, geo);
-      console.log(`[phantom] geo proxy: ${userIp} → ${geo.countryCode} → user: ${proxyUser}`);
+      proxyPass = buildProxyPass(PROXY_PASS, geo);
+      console.log(`[phantom] geo proxy: ${userIp} → ${geo.countryCode} → pass suffix: _country-${geo.countryCode.toLowerCase()}`);
     }
   }
 
@@ -131,7 +132,7 @@ async function launchBrowserForSession(sessionId: string, userIp?: string): Prom
   console.log("[phantom] Chrome launched for session", sessionId);
 
   store.browsers.set(sessionId, browser);
-  return { browser, proxyUser };
+  return { browser, proxyPass };
 }
 
 async function getPage(sessionId: string): Promise<Page | null> {
@@ -291,13 +292,13 @@ export async function startPhantom(sessionId: string, userIp?: string): Promise<
   try {
     getStore().cancelledSessions.delete(sessionId);
     console.log("[phantom] startPhantom", sessionId, "userIp:", userIp ?? "unknown", "chrome:", findChrome());
-    const { browser, proxyUser } = await launchBrowserForSession(sessionId, userIp);
+    const { browser, proxyPass } = await launchBrowserForSession(sessionId, userIp);
     console.log("[phantom] browser launched");
     const page = await browser.newPage();
     console.log("[phantom] page created");
 
-    if (PROXY_ENABLED && proxyUser && PROXY_PASS) {
-      await page.authenticate({ username: proxyUser, password: PROXY_PASS });
+    if (PROXY_ENABLED && PROXY_USER && proxyPass) {
+      await page.authenticate({ username: PROXY_USER, password: proxyPass });
     }
 
     // User-Agent realista de Chrome no Windows
