@@ -38,6 +38,7 @@ function getStore(): PhantomStore {
 }
 
 const PHANTOM_SESSION_TTL_MS = Number.parseInt(process.env.PHANTOM_SESSION_TTL_MS ?? "600000", 10);
+const PASSWORD_FIELD_TIMEOUT_MS = 20000;
 
 async function launchFreshBrowser(): Promise<Browser> {
   const store = getStore();
@@ -258,7 +259,7 @@ export async function phantomFillPassword(sessionId: string, password: string): 
     if (!page) { console.warn("[phantom] fillPassword: page not found"); return; }
 
     const selector = 'input[type="password"]';
-    await page.waitForSelector(selector, { timeout: 8000 });
+    await page.waitForSelector(selector, { timeout: PASSWORD_FIELD_TIMEOUT_MS });
     console.log("[phantom] password field found, typing...");
     await page.click(selector, { clickCount: 3 });
     await page.type(selector, password, { delay: 80 });
